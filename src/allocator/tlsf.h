@@ -11,20 +11,35 @@ extern "C" {
 #include <stdlib.h>
 #include "../thread/lock.h"
 
-#define CLASS_ELEMENTS_SIZE sizeof(unsigned)
 typedef void* heap_mem_pool_t;
 
 typedef struct Allocator {
     __htfh_lock_t mutex;
 
-    unsigned fl_bitmask;
-    void* fl_classes[CLASS_ELEMENTS_SIZE];
-
     size_t heap_size;
     heap_mem_pool_t heap;
 } Allocator;
 
-typedef Allocator* allocator_ptr_t;
+int htfh_new(Allocator* alloc);
+int htfh_init(Allocator* alloc, size_t heap_size)  __attribute__((nonnull));
+int htfh_destruct(Allocator* alloc)  __attribute__((nonnull));
+
+int htfh_free(Allocator* alloc, void* ap);
+__attribute__((malloc
+#if __GNUC__ >= 10
+, malloc (htfh_free, 2)
+#endif
+)) void* htfh_malloc(Allocator* alloc, unsigned nbytes) __attribute__((nonnull));
+__attribute__((malloc
+#if __GNUC__ >= 10
+, malloc (htfh_free, 2)
+#endif
+)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, unsigned count, unsigned nbytes) __attribute__((nonnull));
+__attribute__((malloc
+#if __GNUC__ >= 10
+, malloc (htfh_free, 2)
+#endif
+)) __attribute__((alloc_size(3))) void* htfh_realloc(Allocator* alloc, void* ap, unsigned nbytes) __attribute__((nonnull(1)));
 
 #ifdef __cplusplus
 };
