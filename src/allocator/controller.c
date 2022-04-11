@@ -32,7 +32,6 @@ declaration int htfh_fls_generic(unsigned int word) {
     if (!(word & 0xf0000000)) { word <<= 4; bit -= 4; }
     if (!(word & 0xc0000000)) { word <<= 2; bit -= 2; }
     if (!(word & 0x80000000)) { word <<= 1; bit -= 1; }
-    printf("bit: %d\n", bit);
     return bit;
 }
 
@@ -90,7 +89,6 @@ BlockHeader* controller_find_suitable_block(Controller* controller, int* fli, in
             return NULL;
         }
         fl = htfh_ffs(fl_map);
-        printf("FL: %d\n", fl);
         *fli = fl;
         sl_map = controller->sl_bitmap[fl];
     }
@@ -151,7 +149,6 @@ BlockHeader* controller_find_free_block(Controller* controller, size_t size) {
         if (fl < FL_INDEX_COUNT) {
             block = controller_find_suitable_block(controller, &fl, &sl);
         }
-        printf("%p", block);
     }
     if (block != NULL) {
         if (block_size(block) >= size) {
