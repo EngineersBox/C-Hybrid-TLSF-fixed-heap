@@ -22,8 +22,13 @@ inline void get_alloc_errmsg(AllocatorErrno err) {
         enum_error(MUTEX_LOCK_DESTROY, "Failed to destroy mutex lock")
         enum_error(PREV_BLOCK_FREE, "Previous block must be free")
         enum_error(BLOCK_IS_LAST, "Current block is last, next not present")
+        enum_error(NEXT_BLOCK_NULL, "Next block is null")
+        enum_error(PREV_BLOCK_NULL, "Previous block is null")
+        enum_error(BLOCK_IS_NULL, "Block in context is null")
+        enum_error(NON_ZERO_BLOCK_SIZE, "Block size must be non-zero")
         enum_error(ALIGN_POWER_OF_TWO, "Must align to a power of two")
         enum_error(NULL_CONTROLLER_INSTANCE, "Controller is not initialised")
+        enum_error(SECOND_LEVEL_BITMAP_NULL, "Second level bitmap is null")
         enum_error(NONE, "")
         default: break;
     }

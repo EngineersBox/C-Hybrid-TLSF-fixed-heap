@@ -83,7 +83,6 @@ static BlockHeader* block_link_next(BlockHeader* block) {
 }
 
 static void block_mark_as_free(BlockHeader* block) {
-    /* Link the block to the next block, first. */
     BlockHeader* next = block_link_next(block);
     block_set_prev_free(next);
     block_set_free(block);
