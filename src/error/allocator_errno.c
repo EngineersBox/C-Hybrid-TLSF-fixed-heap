@@ -16,6 +16,7 @@ inline void get_alloc_errmsg(AllocatorErrno err) {
         enum_error(HEAP_UNMAP_FAILED, "Failed to unmap anonymous memory for heap")
         enum_error(BAD_DEALLOC, "Unable to destruct Allocator instance")
         enum_error(MALLOC_FAILED, "Unable to reserve memory")
+        enum_error(HEAP_MISALIGNED, "Heap size is not aligned correctly")
         enum_error(MUTEX_LOCK_INIT, "Creation of mutex lock failed")
         enum_error(MUTEX_LOCK_LOCK, "Unable to lock allocator mutex")
         enum_error(MUTEX_LOCK_UNLOCK, "Unable to unlock allocator mutex")
@@ -33,6 +34,10 @@ inline void get_alloc_errmsg(AllocatorErrno err) {
         enum_error(ALIGN_POWER_OF_TWO, "Must align to a power of two")
         enum_error(NULL_CONTROLLER_INSTANCE, "Controller is not initialised")
         enum_error(SECOND_LEVEL_BITMAP_NULL, "Second level bitmap is null")
+        enum_error(FIRST_LEVEL_BITMAP_NULL, "First level bitmap is null")
+        enum_error(HEAP_FULL, "Cannot allocate, heap is full")
+        enum_error(POOL_MISALIGNED, "Memory pool was not aligned correctly")
+        enum_error(INVALID_POOL_SIZE, "Memory pool was of an invalid size")
         enum_error(NONE, "")
         default: break;
     }

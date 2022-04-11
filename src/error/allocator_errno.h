@@ -18,6 +18,7 @@ typedef enum allocator_error_num {
     HEAP_UNMAP_FAILED,
     BAD_DEALLOC,
     MALLOC_FAILED,
+    HEAP_MISALIGNED,
 
     MUTEX_LOCK_INIT,
     MUTEX_LOCK_LOCK,
@@ -40,6 +41,12 @@ typedef enum allocator_error_num {
     NULL_CONTROLLER_INSTANCE,
 
     SECOND_LEVEL_BITMAP_NULL,
+    FIRST_LEVEL_BITMAP_NULL,
+
+    HEAP_FULL,
+
+    POOL_MISALIGNED,
+    INVALID_POOL_SIZE,
 } AllocatorErrno;
 
 

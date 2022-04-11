@@ -27,6 +27,8 @@ int htfh_new(Allocator* alloc);
 int htfh_init(Allocator* alloc, size_t heap_size)  __attribute__((nonnull));
 int htfh_destruct(Allocator* alloc)  __attribute__((nonnull));
 
+heap_mem_pool_t htfh_add_pool(Allocator* alloc, heap_mem_pool_t mem, size_t bytes) __attribute__((nonnull));
+
 int htfh_free(Allocator* alloc, void* ap) __attribute__((nonnull));
 __attribute__((malloc
 #if __GNUC__ >= 10

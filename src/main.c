@@ -18,19 +18,19 @@ struct TestStruct {
 
 int main(int argc, char* argv[]) {
     Allocator* alloc = malloc(sizeof(*alloc));
-    if (htfh_new(alloc) == -1) {
+    if (htfh_new(alloc) != 0) {
         alloc_perror("");
         return 1;
     }
-    if (htfh_init(alloc, HEAP_SIZE) == -1) {
+    if (htfh_init(alloc, HEAP_SIZE) != 0) {
         alloc_perror("Initialisation failed for heap size 16*10000 bytes: ");
         return 1;
     }
     struct TestStruct* test_struct = htfh_malloc(alloc, sizeof(*test_struct));
     if (test_struct == NULL) {
-        print_error("Failed to allocate %lu bytes for TestStruct", sizeof(*test_struct));
+        print_error("Failed to allocate %lu bytes for TestStruct: ", sizeof(*test_struct));
     }
-    if (htfh_destruct(alloc) == -1) {
+    if (htfh_destruct(alloc) != 0) {
         alloc_perror("");
         return 1;
     }

@@ -34,7 +34,58 @@ static size_t fit_allocation_size(size_t size, size_t alignment) {
     return fit;
 }
 
+#define htfh_pool_overhead (2 * block_header_overhead)
+#define htfh_alloc_overhead block_header_overhead
+
 // ==== PUBLIC API ====
+
+heap_mem_pool_t htfh_add_pool(Allocator* alloc, heap_mem_pool_t mem, size_t bytes) {
+    if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return NULL;
+    }
+    BlockHeader* block;
+    BlockHeader* next;
+    const size_t pool_overhead = htfh_pool_overhead;
+    const size_t pool_bytes = align_down(bytes - pool_overhead, ALIGN_SIZE);
+    if (((ptrdiff_t) mem % ALIGN_SIZE) != 0) {
+        set_alloc_errno(POOL_MISALIGNED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return NULL;
+    }
+    if (pool_bytes < block_size_min || pool_bytes > block_size_max) {
+        char msg[100];
+        sprintf(
+            msg,
+            "Memory pool must be between 0x%x and 0x%x00 bytes: ",
+#ifdef ARCH_64_BIT
+            (unsigned int)(pool_overhead + block_size_min),
+            (unsigned int)((pool_overhead + block_size_max) / 256)
+#else
+            (unsigned int)(pool_overhead + block_size_min),
+            (unsigned int)(pool_overhead + block_size_max)
+#endif
+        );
+        set_alloc_errno_msg(INVALID_POOL_SIZE, msg);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return NULL;
+    }
+
+    block = offset_to_block(mem, -(ptrdiff_t)block_header_overhead);
+    block_set_size(block, pool_bytes);
+    block_set_free(block);
+    block_set_prev_used(block);
+    controller_block_insert(alloc->controller, block);
+
+    next = block_link_next(block);
+    block_set_size(next, 0);
+    block_set_used(next);
+    block_set_prev_free(next);
+
+    if (__htfh_lock_unlock_handled(&alloc->mutex) != 0) {
+        return NULL;
+    }
+    return mem;
+}
 
 int htfh_new(Allocator* alloc) {
     if (alloc == NULL) {
@@ -62,6 +113,9 @@ int htfh_init(Allocator* alloc, size_t heap_size) {
         set_alloc_errno(HEAP_ALREADY_MAPPED);
         __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
+    } else if (heap_size % ALIGN_SIZE != 0) {
+        set_alloc_errno(HEAP_MISALIGNED);
+        return -1;
     }
     alloc->heap_size = heap_size;
     alloc->controller = alloc->heap = mmap(
@@ -78,6 +132,10 @@ int htfh_init(Allocator* alloc, size_t heap_size) {
         return -1;
     }
     if (controller_new(alloc->controller) != 0) {
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    if (htfh_add_pool(alloc, alloc->heap, heap_size) == NULL) {
         __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
     }
@@ -115,10 +173,6 @@ void* htfh_malloc(Allocator* alloc, size_t nbytes) {
     }
     const size_t fitted_allocation_size = fit_allocation_size(nbytes, ALIGN_SIZE);
     BlockHeader* block = controller_find_free_block(alloc->controller, fitted_allocation_size);
-    if (block == NULL) {
-        __htfh_lock_unlock_handled(&alloc->mutex);
-        return NULL;
-    }
     void* ptr = controller_mark_block_used(alloc->controller, block, fitted_allocation_size);
     __htfh_lock_unlock_handled(&alloc->mutex);
     return ptr;

@@ -58,7 +58,6 @@ declaration int tlsf_fls_sizet(size_t size) {
 void mapping_insert(size_t size, int* fli, int* sli) {
     int fl, sl;
     if (size < SMALL_BLOCK_SIZE) {
-        /* Store small blocks in first list. */
         fl = 0;
         sl = (int) size / (SMALL_BLOCK_SIZE / SL_INDEX_COUNT);
     } else {
@@ -86,7 +85,8 @@ BlockHeader* controller_find_suitable_block(Controller* controller, int* fli, in
     if (!sl_map) {
         const unsigned int fl_map = controller->fl_bitmap & (~0U << (fl + 1));
         if (!fl_map) {
-            return 0;
+            set_alloc_errno(HEAP_FULL);
+            return NULL;
         }
         fl = htfh_ffs(fl_map);
         *fli = fl;
@@ -145,11 +145,11 @@ BlockHeader* controller_find_free_block(Controller* controller, size_t size) {
     BlockHeader* block = NULL;
     if (size) {
         mapping_search(size, &fl, &sl);
-        if (sl < FL_INDEX_COUNT) {
+        if (fl < FL_INDEX_COUNT) {
             block = controller_find_suitable_block(controller, &fl, &sl);
         }
     }
-    if (block) {
+    if (block != NULL) {
         if (block_size(block) >= size) {
             return NULL;
         }
@@ -182,17 +182,17 @@ void* controller_mark_block_used(Controller* controller, BlockHeader* block, siz
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return NULL;
-    } else if (block == NULL) {
-        set_alloc_errno(BLOCK_IS_NULL);
-        return NULL;
-    } else if (!size) {
-        set_alloc_errno(NON_ZERO_BLOCK_SIZE);
-        return NULL;
     }
     void* p = NULL;
-    p = block_to_ptr(block);
-    controller_trim_free_block(controller, block, size);
-    block_mark_as_used(block);
+    if (block) {
+        if (!size) {
+            set_alloc_errno(NON_ZERO_BLOCK_SIZE);
+            return NULL;
+        }
+        controller_trim_free_block(controller, block, size);
+        block_mark_as_used(block);
+        p = block_to_ptr(block);
+    }
     return p;
 }
 
