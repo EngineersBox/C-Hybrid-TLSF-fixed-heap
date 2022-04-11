@@ -10,11 +10,14 @@ extern "C" {
 #include <stdint.h>
 #include <stdlib.h>
 #include "../thread/lock.h"
+#include "controller.h"
 
 typedef void* heap_mem_pool_t;
 
 typedef struct Allocator {
     __htfh_lock_t mutex;
+
+    Controller* controller;
 
     size_t heap_size;
     heap_mem_pool_t heap;
@@ -29,17 +32,17 @@ __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) void* htfh_malloc(Allocator* alloc, unsigned nbytes) __attribute__((nonnull));
+)) void* htfh_malloc(Allocator* alloc, size_t nbytes) __attribute__((nonnull));
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, unsigned count, unsigned nbytes) __attribute__((nonnull));
+)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, size_t count, size_t nbytes) __attribute__((nonnull));
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(3))) void* htfh_realloc(Allocator* alloc, void* ap, unsigned nbytes) __attribute__((nonnull(1)));
+)) __attribute__((alloc_size(3))) void* htfh_realloc(Allocator* alloc, void* ap, size_t nbytes) __attribute__((nonnull(1)));
 
 #ifdef __cplusplus
 };

@@ -22,6 +22,9 @@ typedef enum allocator_error_num {
     MUTEX_LOCK_LOCK,
     MUTEX_LOCK_UNLOCK,
     MUTEX_LOCK_DESTROY,
+    PREV_BLOCK_FREE,
+    BLOCK_IS_LAST,
+    ALIGN_POWER_OF_TWO,
 } AllocatorErrno;
 
 
