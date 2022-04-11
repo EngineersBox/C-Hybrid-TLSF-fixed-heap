@@ -102,6 +102,7 @@ int htfh_new(Allocator* alloc) {
     }
     alloc->heap_size = 0;
     alloc->heap = NULL;
+    alloc->controller = NULL;
     return 0;
 }
 
@@ -117,7 +118,7 @@ int htfh_init(Allocator* alloc, size_t heap_size) {
         return -1;
     }
     alloc->heap_size = heap_size;
-    alloc->heap = mmap(
+    alloc->controller = alloc->heap = mmap(
         NULL,
         heap_size,
         PROT_READ | PROT_WRITE,
@@ -127,6 +128,10 @@ int htfh_init(Allocator* alloc, size_t heap_size) {
     );
     if (alloc->heap == NULL) {
         set_alloc_errno(HEAP_MMAP_FAILED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    if (controller_new(alloc->controller) != 0) {
         __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
     }

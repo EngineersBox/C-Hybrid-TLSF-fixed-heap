@@ -16,7 +16,7 @@ typedef struct Controller {
     BlockHeader* blocks[FL_INDEX_COUNT][SL_INDEX_COUNT];
 } Controller;
 
-// TODO: controller_new, controller_destruct
+int controller_new(Controller* controller);
 
 #ifdef __cplusplus
 };

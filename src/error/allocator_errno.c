@@ -23,6 +23,7 @@ inline void get_alloc_errmsg(AllocatorErrno err) {
         enum_error(PREV_BLOCK_FREE, "Previous block must be free")
         enum_error(BLOCK_IS_LAST, "Current block is last, next not present")
         enum_error(ALIGN_POWER_OF_TWO, "Must align to a power of two")
+        enum_error(NULL_CONTROLLER_INSTANCE, "Controller is not initialised")
         enum_error(NONE, "")
         default: break;
     }
