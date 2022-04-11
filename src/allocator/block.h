@@ -11,6 +11,7 @@ extern "C" {
 #include <stddef.h>
 
 #include "constants.h"
+#include "utils.h"
 
 typedef struct BlockHeader {
     struct BlockHeader* prev_physical_block;
@@ -26,23 +27,25 @@ static const size_t block_start_offset = offsetof(BlockHeader, size) + sizeof(si
 static const size_t block_size_min = sizeof(BlockHeader) - sizeof(BlockHeader*);
 static const size_t block_size_max = ((size_t) 1) << FL_INDEX_MAX;
 
-static size_t block_size(const BlockHeader* block) __attribute__((nonnull(1)));
-static void block_set_size(BlockHeader* block, size_t size) __attribute__((nonnull(1)));
-static int block_is_last(const BlockHeader* block) __attribute__((nonnull(1)));
-static int block_is_free(const BlockHeader* block) __attribute__((nonnull(1)));
-static void block_set_free(BlockHeader* block) __attribute__((nonnull(1)));
-static void block_set_used(BlockHeader* block) __attribute__((nonnull(1)));
-static int block_is_prev_free(const BlockHeader* block) __attribute__((nonnull(1)));
-static void block_set_prev_free(BlockHeader* block) __attribute__((nonnull(1)));
-static void block_set_prev_used(BlockHeader* block) __attribute__((nonnull(1)));
-static BlockHeader* block_from_ptr(const void* ptr) __attribute__((nonnull(1)));
-static void* block_to_ptr(const BlockHeader* block) __attribute__((nonnull(1)));
-static BlockHeader* offset_to_block(const void* ptr, size_t size) __attribute__((nonnull(1)));
-static BlockHeader* block_prev(const BlockHeader* block) __attribute__((nonnull(1)));
-static BlockHeader* block_next(const BlockHeader* block) __attribute__((nonnull(1)));
-static BlockHeader* block_link_next(BlockHeader* block) __attribute__((nonnull(1)));
-static void block_mark_as_free(BlockHeader* block) __attribute__((nonnull(1)));
-static void block_mark_as_used(BlockHeader* block) __attribute__((nonnull(1)));
+size_t block_size(const BlockHeader* block) __attribute__((nonnull(1)));
+void block_set_size(BlockHeader* block, size_t size) __attribute__((nonnull(1)));
+int block_is_last(const BlockHeader* block) __attribute__((nonnull(1)));
+int block_is_free(const BlockHeader* block) __attribute__((nonnull(1)));
+void block_set_free(BlockHeader* block) __attribute__((nonnull(1)));
+void block_set_used(BlockHeader* block) __attribute__((nonnull(1)));
+int block_is_prev_free(const BlockHeader* block) __attribute__((nonnull(1)));
+void block_set_prev_free(BlockHeader* block) __attribute__((nonnull(1)));
+void block_set_prev_used(BlockHeader* block) __attribute__((nonnull(1)));
+BlockHeader* block_from_ptr(const void* ptr) __attribute__((nonnull(1)));
+void* block_to_ptr(const BlockHeader* block) __attribute__((nonnull(1)));
+BlockHeader* offset_to_block(const void* ptr, size_t size) __attribute__((nonnull(1)));
+BlockHeader* block_prev(const BlockHeader* block) __attribute__((nonnull(1)));
+BlockHeader* block_next(const BlockHeader* block) __attribute__((nonnull(1)));
+BlockHeader* block_link_next(BlockHeader* block) __attribute__((nonnull(1)));
+void block_mark_as_free(BlockHeader* block) __attribute__((nonnull(1)));
+void block_mark_as_used(BlockHeader* block) __attribute__((nonnull(1)));
+int block_can_split(BlockHeader* block, size_t size) __attribute__((nonnull(1)));
+BlockHeader* block_split(BlockHeader* block, size_t size) __attribute__((nonnull(1)));
 
 #ifdef __cplusplus
 };

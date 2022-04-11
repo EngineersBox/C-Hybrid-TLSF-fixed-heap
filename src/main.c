@@ -4,7 +4,7 @@
 
 struct TestStruct {
     int value;
-    char str[4];
+    char str[18];
 };
 
 #define print_error(subs, bytes) \
@@ -26,7 +26,10 @@ int main(int argc, char* argv[]) {
         alloc_perror("Initialisation failed for heap size 16*10000 bytes: ");
         return 1;
     }
-
+    struct TestStruct* test_struct = htfh_malloc(alloc, sizeof(*test_struct));
+    if (test_struct == NULL) {
+        print_error("Failed to allocate %lu bytes for TestStruct", sizeof(*test_struct));
+    }
     if (htfh_destruct(alloc) == -1) {
         alloc_perror("");
         return 1;

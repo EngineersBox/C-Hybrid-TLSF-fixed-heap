@@ -55,7 +55,7 @@ declaration int tlsf_fls_sizet(size_t size) {
 
 #undef declaration
 
-static void mapping_insert(size_t size, int* fli, int* sli) {
+void mapping_insert(size_t size, int* fli, int* sli) {
     int fl, sl;
     if (size < SMALL_BLOCK_SIZE) {
         /* Store small blocks in first list. */
@@ -70,7 +70,7 @@ static void mapping_insert(size_t size, int* fli, int* sli) {
     *sli = sl;
 }
 
-static void mapping_search(size_t size, int* fli, int* sli) {
+void mapping_search(size_t size, int* fli, int* sli) {
     if (size >= SMALL_BLOCK_SIZE) {
         const size_t round = (1 << (htfh_fls_sizet(size) - SL_INDEX_COUNT_LOG2)) - 1;
         size += round;
@@ -78,7 +78,7 @@ static void mapping_search(size_t size, int* fli, int* sli) {
     mapping_insert(size, fli, sli);
 }
 
-static BlockHeader* controller_find_suitable_block(Controller* controller, int* fli, int* sli) {
+BlockHeader* controller_find_suitable_block(Controller* controller, int* fli, int* sli) {
     int fl = *fli;
     int sl = *sli;
 
@@ -101,7 +101,7 @@ static BlockHeader* controller_find_suitable_block(Controller* controller, int* 
     return controller->blocks[fl][sl];
 }
 
-static int controller_remove_free_block(Controller* controller, BlockHeader* block, int fl, int sl) {
+int controller_remove_free_block(Controller* controller, BlockHeader* block, int fl, int sl) {
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return -1;
@@ -135,7 +135,7 @@ static int controller_remove_free_block(Controller* controller, BlockHeader* blo
     return 0;
 }
 
-static BlockHeader* controller_find_free_block(Controller* controller, size_t size) {
+BlockHeader* controller_find_free_block(Controller* controller, size_t size) {
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return NULL;
@@ -160,11 +160,25 @@ static BlockHeader* controller_find_free_block(Controller* controller, size_t si
     return block;
 }
 
-static void controller_trim_free_block(Controller* controller, BlockHeader* block, size_t size) {
-    
+int controller_trim_free_block(Controller* controller, BlockHeader* block, size_t size) {
+    if (!block_is_free(block)) {
+        set_alloc_errno(BLOCK_NOT_FREE);
+        return -1;
+    }
+    if (!block_can_split(block, size)) {
+        return 0;
+    }
+    BlockHeader* remaining_block = block_split(block, size);
+    if (remaining_block == NULL) {
+        return -1;
+    }
+    block_link_next(block);
+    block_set_prev_free(remaining_block);
+    controller_block_insert(controller, remaining_block);
+    return 0;
 }
 
-static void* controller_mark_block_used(Controller* controller, BlockHeader* block, size_t size) {
+void* controller_mark_block_used(Controller* controller, BlockHeader* block, size_t size) {
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return NULL;
@@ -177,31 +191,40 @@ static void* controller_mark_block_used(Controller* controller, BlockHeader* blo
     }
     void* p = NULL;
     p = block_to_ptr(block);
+    controller_trim_free_block(controller, block, size);
     block_mark_as_used(block);
     return p;
 }
 
-static size_t align_up(size_t x, size_t align) {
-    if ((align & (align -1)) != 0) {
-        set_alloc_errno(ALIGN_POWER_OF_TWO);
-        return 0;
+int controller_insert_free_block(Controller* controller, BlockHeader* block, int fl, int sl) {
+    if (controller == NULL) {
+        set_alloc_errno(NULL_CONTROLLER_INSTANCE);
+        return -1;
+    } else if (block == NULL) {
+        set_alloc_errno(BLOCK_IS_NULL);
+        return -1;
     }
-    return (x + (align - 1)) & ~(align - 1);
+    BlockHeader* current = controller->blocks[fl][sl];
+    if (current == NULL) {
+        set_alloc_errno_msg(BLOCK_IS_NULL, "Free list cannot have a null entry");
+        return -1;
+    }
+    block->next_free = current;
+    block->prev_free = &controller->block_null;
+    current->prev_free = block;
+    if (block_to_ptr(block) != align_ptr(block_to_ptr(block), ALIGN_SIZE)) {
+        set_alloc_errno(BLOCK_NOT_ALIGNED);
+        return -1;
+    }
+    controller->blocks[fl][sl] = block;
+    controller->fl_bitmap |= (1U << fl);
+    controller->sl_bitmap[fl] |= (1U << sl);
+    return 0;
 }
 
-static size_t align_down(size_t x, size_t align) {
-    if ((align & (align -1)) != 0) {
-        set_alloc_errno(ALIGN_POWER_OF_TWO);
-        return 0;
-    }
-    return x - (x & (align - 1));
-}
-
-static void* align_ptr(const void* ptr, size_t align) {
-    const  ptrdiff_t aligned = ((ptrdiff_t)(ptr) + (align - 1)) & ~(align - 1);
-    if ((align & (align -1)) != 0) {
-        set_alloc_errno(ALIGN_POWER_OF_TWO);
-        return 0;
-    }
-    return (void*) aligned;
+void controller_block_insert(Controller* controller, BlockHeader* block) {
+    int fl;
+    int sl;
+    mapping_insert(block_size(block), &fl, &sl);
+    controller_insert_free_block(controller, block, fl, sl);
 }

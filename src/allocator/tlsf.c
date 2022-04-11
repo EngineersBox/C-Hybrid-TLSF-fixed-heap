@@ -1,10 +1,6 @@
 #include "tlsf.h"
 #include <stddef.h>
-#include <stdlib.h>
 #include <sys/mman.h>
-
-#include "../preprocessor/checks.h"
-#include "../error/allocator_errno.h"
 
 #define __htfh_lock_lock_handled(lock) ({ \
     int lock_result = 0; \
@@ -23,8 +19,6 @@
     } \
     unlock_result; \
 })
-
-// ==== INTERNAL METHODS ====
 
 // ==== INTERNAL ====
 
@@ -88,6 +82,25 @@ int htfh_init(Allocator* alloc, size_t heap_size) {
         return -1;
     }
     return __htfh_lock_unlock_handled(&alloc->mutex);
+}
+
+int htfh_destruct(Allocator* alloc) {
+    if (alloc == NULL) {
+        return 0;
+    }
+    if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return -1;
+    }
+    if (alloc->heap != NULL && munmap(alloc->heap, alloc->heap_size) != 0) {
+        set_alloc_errno(HEAP_UNMAP_FAILED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    if (__htfh_lock_unlock_handled(&alloc->mutex) == -1) {
+        return -1;
+    }
+    free(alloc);
+    return 0;
 }
 
 void* htfh_malloc(Allocator* alloc, size_t nbytes) {
