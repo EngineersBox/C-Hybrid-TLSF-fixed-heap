@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
         print_error("Failed to allocate %zu bytes for TestStruct2: ", sizeof(*test_struct2));
     }
     test_struct2->value = 84;
-    strncpy(test_struct2->str, "012345678912345678", 18);
+    strncpy(test_struct2->str, "012345678901234567", 18);
 
     printf("Test struct 2: [Value: %d] [Str: %s]\n", test_struct2->value, test_struct2->str);
     printf("Test struct:   [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
