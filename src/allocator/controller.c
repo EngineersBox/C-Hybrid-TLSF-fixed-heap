@@ -182,18 +182,16 @@ void* controller_mark_block_used(Controller* controller, BlockHeader* block, siz
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return NULL;
+    } else if (block == NULL) {
+        set_alloc_errno(BLOCK_IS_NULL);
+        return NULL;
+    } else if (!size) {
+        set_alloc_errno(NON_ZERO_BLOCK_SIZE);
+        return NULL;
     }
-    void* p = NULL;
-    if (block) {
-        if (!size) {
-            set_alloc_errno(NON_ZERO_BLOCK_SIZE);
-            return NULL;
-        }
-        controller_trim_free_block(controller, block, size);
-        block_mark_as_used(block);
-        p = block_to_ptr(block);
-    }
-    return p;
+    controller_trim_free_block(controller, block, size);
+    block_mark_as_used(block);
+    return block_to_ptr(block);
 }
 
 int controller_insert_free_block(Controller* controller, BlockHeader* block, int fl, int sl) {
