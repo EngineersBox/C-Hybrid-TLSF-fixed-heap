@@ -226,3 +226,45 @@ void controller_block_insert(Controller* controller, BlockHeader* block) {
     mapping_insert(block_size(block), &fl, &sl);
     controller_insert_free_block(controller, block, fl, sl);
 }
+
+BlockHeader* controller_block_merge_prev(Controller* controller, BlockHeader* block) {
+    if (!block_is_prev_free(block)) {
+        return block;
+    }
+    BlockHeader* prev = block_prev(block);
+    if (prev == NULL) {
+        set_alloc_errno(BLOCK_IS_NULL);
+        return NULL;
+    } else if (!block_is_free(prev)) {
+        set_alloc_errno(BLOCK_NOT_FREE);
+        return NULL;
+    } else if (controller_block_remove(controller, prev) != 0) {
+        set_alloc_errno(CANNOT_REMOVE_BLOCK);
+        return NULL;
+    }
+    return block_absorb(prev, block);
+}
+
+BlockHeader* controller_block_merge_next(Controller* controller, BlockHeader* block) {
+    BlockHeader* next = block_next(block);
+    if (next == NULL) {
+        set_alloc_errno(BLOCK_IS_NULL);
+        return NULL;
+    } else if (!block_is_free(next)) {
+        return block;
+    } else if (block_is_last(block)) {
+        set_alloc_errno(BLOCK_IS_LAST);
+        return NULL;
+    } else if (controller_block_remove(controller, next) != 0) {
+        set_alloc_errno(CANNOT_REMOVE_BLOCK);
+        return NULL;
+    }
+    return block_absorb(block, next);
+}
+
+int controller_block_remove(Controller* controller, BlockHeader* block) {
+    int fl;
+    int sl;
+    mapping_insert(block_size(block),  &fl, &sl);
+    return controller_remove_free_block(controller, block, fl, sl);
+}

@@ -176,3 +176,42 @@ void* htfh_malloc(Allocator* alloc, size_t nbytes) {
     __htfh_lock_unlock_handled(&alloc->mutex);
     return ptr;
 }
+
+int htfh_free(Allocator* alloc, void* ptr) {
+    if (alloc == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return -1;
+    } else if (alloc->controller == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return -1;
+    } else if (ptr == NULL) {
+        set_alloc_errno(FREE_NULL_PTR);
+        return -1;
+    } else if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return -1;
+    }
+    BlockHeader* block = block_from_ptr(ptr);
+    if (block == NULL) {
+        set_alloc_errno(PTR_NOT_TO_BLOCK_HEADER);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    if (block_is_free(block)) {
+        set_alloc_errno(BLOCK_ALREADY_FREED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    block_mark_as_free(block);
+    if ((block = controller_block_merge_prev(alloc->controller, block)) == NULL) {
+        set_alloc_errno(MERGE_PREV_FAILED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    } else if ((block = controller_block_merge_next(alloc->controller, block)) == NULL) {
+        set_alloc_errno(MERGE_NEXT_FAILED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    controller_block_insert(alloc->controller, block);
+    __htfh_lock_unlock_handled(&alloc->mutex);
+    return 0;
+}

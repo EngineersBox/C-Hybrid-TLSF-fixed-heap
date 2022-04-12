@@ -35,6 +35,8 @@ typedef enum allocator_error_num {
     BLOCK_NOT_ALIGNED,
     BLOCK_SIZE_MISMATCH,
     INVALID_BLOCK_SPLIT_SIZE,
+    BLOCK_ALREADY_FREED,
+    CANNOT_REMOVE_BLOCK,
 
     ALIGN_POWER_OF_TWO,
 
@@ -47,6 +49,11 @@ typedef enum allocator_error_num {
 
     POOL_MISALIGNED,
     INVALID_POOL_SIZE,
+
+    FREE_NULL_PTR,
+    PTR_NOT_TO_BLOCK_HEADER,
+    MERGE_PREV_FAILED,
+    MERGE_NEXT_FAILED,
 } AllocatorErrno;
 
 

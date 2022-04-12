@@ -38,6 +38,12 @@ inline void get_alloc_errmsg(AllocatorErrno err) {
         enum_error(HEAP_FULL, "Cannot allocate, heap is full")
         enum_error(POOL_MISALIGNED, "Memory pool was not aligned correctly")
         enum_error(INVALID_POOL_SIZE, "Memory pool was of an invalid size")
+        enum_error(FREE_NULL_PTR, "Attempted to free null pointer")
+        enum_error(PTR_NOT_TO_BLOCK_HEADER, "Pointer does not point to a block header")
+        enum_error(BLOCK_ALREADY_FREED, "Block was already freed")
+        enum_error(MERGE_PREV_FAILED, "Unable to merge free block with previous")
+        enum_error(MERGE_NEXT_FAILED, "Unable to merge free block with next")
+        enum_error(CANNOT_REMOVE_BLOCK, "Unable to remove block")
         enum_error(NONE, "")
         default: break;
     }

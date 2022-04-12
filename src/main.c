@@ -33,7 +33,27 @@ int main(int argc, char* argv[]) {
     test_struct->value = 42;
     strncpy(test_struct->str, "abcdefghijklmnopqr", 18);
 
-    printf("Test struct: [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
+    printf("Test struct:    [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
+
+    if (htfh_free(alloc, test_struct) != 0) {
+        alloc_perror("Failed to deallocate TestStruct: ");
+        return 1;
+    }
+
+    struct TestStruct* test_struct2 = htfh_malloc(alloc, sizeof(*test_struct2));
+    if (test_struct2 == NULL) {
+        print_error("Failed to allocate %lu bytes for TestStruct2: ", sizeof(*test_struct2));
+    }
+    test_struct2->value = 84;
+    strncpy(test_struct2->str, "012345678912345678", 18);
+
+    printf("Test struct 2: [Value: %d] [Str: %s]\n", test_struct2->value, test_struct2->str);
+    printf("Test struct:   [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
+
+    if (htfh_free(alloc, test_struct2) != 0) {
+        alloc_perror("Failed to deallocate TestStruct2: ");
+        return 1;
+    }
 
     if (htfh_destruct(alloc) != 0) {
         alloc_perror("");

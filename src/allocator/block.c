@@ -117,3 +117,13 @@ BlockHeader* block_split(BlockHeader* block, size_t size) {
     block_mark_as_free(remaining);
     return remaining;
 }
+
+BlockHeader* block_absorb(BlockHeader* block1, BlockHeader* block2) {
+    if (block_is_last(block1)) {
+        set_alloc_errno(BLOCK_IS_LAST);
+        return NULL;
+    }
+    block1->size += block_size(block2) + block_header_overhead;
+    block_link_next(block1);
+    return block1;
+}

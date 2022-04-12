@@ -26,6 +26,9 @@ int controller_trim_free_block(Controller* controller, BlockHeader* block, size_
 void controller_block_insert(Controller* controller, BlockHeader* block);
 int controller_insert_free_block(Controller* controller, BlockHeader* block, int fl, int sl);
 void controller_insert_block(Controller* controller, BlockHeader* block) __attribute__((nonnull));
+BlockHeader* controller_block_merge_prev(Controller* controller, BlockHeader* block) __attribute__((nonnull));
+BlockHeader* controller_block_merge_next(Controller* controller, BlockHeader* block) __attribute__((nonnull));
+int controller_block_remove(Controller* controller, BlockHeader* block) __attribute__((nonnull));
 
 void mapping_insert(size_t size, int* fli, int* sli);
 void mapping_search(size_t size, int* fli, int* sli);

@@ -46,6 +46,7 @@ void block_mark_as_free(BlockHeader* block) __attribute__((nonnull(1)));
 void block_mark_as_used(BlockHeader* block) __attribute__((nonnull(1)));
 int block_can_split(BlockHeader* block, size_t size) __attribute__((nonnull(1)));
 BlockHeader* block_split(BlockHeader* block, size_t size) __attribute__((nonnull(1)));
+BlockHeader* block_absorb(BlockHeader* block1, BlockHeader* block2) __attribute__((nonnull));
 
 #ifdef __cplusplus
 };
