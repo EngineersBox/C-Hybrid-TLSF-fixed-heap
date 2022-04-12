@@ -45,6 +45,7 @@ if (htfh_init(alloc, 16 * 10000) != 0) {
 // ... snip ...
 } else if (alloc->heap != NULL) {
     set_alloc_errno(HEAP_ALREADY_MAPPED);
+    __htfh_lock_unlock_handled(&alloc->mutex);
     return -1;
 }
 // ... snip ...
