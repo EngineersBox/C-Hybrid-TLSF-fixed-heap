@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     }
     struct TestStruct* test_struct = htfh_malloc(alloc, sizeof(*test_struct));
     if (test_struct == NULL) {
-        print_error("Failed to allocate %lu bytes for TestStruct: ", sizeof(*test_struct));
+        print_error("Failed to allocate %zu bytes for TestStruct: ", sizeof(*test_struct));
     }
     test_struct->value = 42;
     strncpy(test_struct->str, "abcdefghijklmnopqr", 18);
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
     struct TestStruct* test_struct2 = htfh_malloc(alloc, sizeof(*test_struct2));
     if (test_struct2 == NULL) {
-        print_error("Failed to allocate %lu bytes for TestStruct2: ", sizeof(*test_struct2));
+        print_error("Failed to allocate %zu bytes for TestStruct2: ", sizeof(*test_struct2));
     }
     test_struct2->value = 84;
     strncpy(test_struct2->str, "012345678912345678", 18);
