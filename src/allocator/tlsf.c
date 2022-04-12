@@ -114,6 +114,7 @@ int htfh_init(Allocator* alloc, size_t heap_size) {
         return -1;
     } else if (heap_size % ALIGN_SIZE != 0) {
         set_alloc_errno(HEAP_MISALIGNED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
     }
     alloc->heap_size = heap_size;
