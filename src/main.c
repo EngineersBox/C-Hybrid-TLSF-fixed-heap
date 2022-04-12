@@ -30,6 +30,11 @@ int main(int argc, char* argv[]) {
     if (test_struct == NULL) {
         print_error("Failed to allocate %lu bytes for TestStruct: ", sizeof(*test_struct));
     }
+    test_struct->value = 42;
+    strncpy(test_struct->str, "abcdefghijklmnopqr", 18);
+
+    printf("Test struct: [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
+
     if (htfh_destruct(alloc) != 0) {
         alloc_perror("");
         return 1;

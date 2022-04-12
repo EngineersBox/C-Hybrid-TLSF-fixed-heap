@@ -69,7 +69,6 @@ heap_mem_pool_t htfh_add_pool(Allocator* alloc, heap_mem_pool_t mem, size_t byte
         __htfh_lock_unlock_handled(&alloc->mutex);
         return NULL;
     }
-
     block = offset_to_block(mem, -(ptrdiff_t)block_header_overhead);
     block_set_size(block, pool_bytes);
     block_set_free(block);

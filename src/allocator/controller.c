@@ -144,14 +144,13 @@ BlockHeader* controller_find_free_block(Controller* controller, size_t size) {
     int sl = 0;
     BlockHeader* block = NULL;
     if (size) {
-        printf("%zu", size);
         mapping_search(size, &fl, &sl);
         if (fl < FL_INDEX_COUNT) {
             block = controller_find_suitable_block(controller, &fl, &sl);
         }
     }
     if (block != NULL) {
-        if (block_size(block) >= size) {
+        if (block_size(block) < size) {
             return NULL;
         }
         if (controller_remove_free_block(controller, block, fl, sl) != 0) {
