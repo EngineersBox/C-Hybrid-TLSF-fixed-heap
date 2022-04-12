@@ -1,5 +1,10 @@
 # C-Hybrid-TLSF-fixed-heap
-A hybrid TLSF fixed heap allocator for managing pre-allocated heap memory.
+
+C UNIX only hybrid TLSF fixed heap allocator for managing pre-allocated heap memory via an anonymous memory map.
+
+## Credits
+
+Implementation is based on Matt Conte's TLSF: <https://github.com/mattconte/tlsf>
 
 ## Methods
 
