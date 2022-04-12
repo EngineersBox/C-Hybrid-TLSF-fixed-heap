@@ -182,7 +182,7 @@ int htfh_free(Allocator* alloc, void* ptr) {
         set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
         return -1;
     } else if (alloc->controller == NULL) {
-        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return -1;
     } else if (ptr == NULL) {
         set_alloc_errno(FREE_NULL_PTR);
