@@ -105,7 +105,7 @@ int controller_remove_free_block(Controller* controller, BlockHeader* block, int
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return -1;
-    } else if (block == NULL) {
+    } else if (block == NULL || block == &controller->block_null) {
         set_alloc_errno(BLOCK_IS_NULL);
         return -1;
     }
@@ -169,7 +169,7 @@ int controller_trim_free_block(Controller* controller, BlockHeader* block, size_
         return 0;
     }
     BlockHeader* remaining_block = block_split(block, size);
-    if (remaining_block == NULL) {
+    if (remaining_block == NULL || block == &controller->block_null) {
         return -1;
     }
     block_link_next(block);
@@ -182,7 +182,7 @@ void* controller_mark_block_used(Controller* controller, BlockHeader* block, siz
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return NULL;
-    } else if (block == NULL) {
+    } else if (block == NULL || block == &controller->block_null) {
         set_alloc_errno(BLOCK_IS_NULL);
         return NULL;
     } else if (!size) {
@@ -198,7 +198,7 @@ int controller_insert_free_block(Controller* controller, BlockHeader* block, int
     if (controller == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return -1;
-    } else if (block == NULL) {
+    } else if (block == NULL || block == &controller->block_null) {
         set_alloc_errno(BLOCK_IS_NULL);
         return -1;
     }

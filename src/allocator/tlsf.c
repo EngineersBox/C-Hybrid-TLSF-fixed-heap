@@ -174,7 +174,9 @@ void* htfh_malloc(Allocator* alloc, size_t nbytes) {
     const size_t fitted_allocation_size = fit_allocation_size(nbytes, ALIGN_SIZE);
     BlockHeader* block = controller_find_free_block(alloc->controller, fitted_allocation_size);
     void* ptr = controller_mark_block_used(alloc->controller, block, fitted_allocation_size);
-    __htfh_lock_unlock_handled(&alloc->mutex);
+    if (__htfh_lock_unlock_handled(&alloc->mutex) != 0) {
+        return NULL;
+    }
     return ptr;
 }
 
@@ -192,7 +194,7 @@ int htfh_free(Allocator* alloc, void* ptr) {
         return -1;
     }
     BlockHeader* block = block_from_ptr(ptr);
-    if (block == NULL) {
+    if (block == NULL || block == &alloc->controller->block_null) {
         set_alloc_errno(PTR_NOT_TO_BLOCK_HEADER);
         __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
@@ -213,6 +215,8 @@ int htfh_free(Allocator* alloc, void* ptr) {
         return -1;
     }
     controller_block_insert(alloc->controller, block);
-    __htfh_lock_unlock_handled(&alloc->mutex);
+    if (__htfh_lock_unlock_handled(&alloc->mutex) != 0) {
+        return -1;
+    }
     return 0;
 }

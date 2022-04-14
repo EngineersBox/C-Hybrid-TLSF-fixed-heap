@@ -29,22 +29,22 @@ int htfh_destruct(Allocator* alloc)  __attribute__((nonnull));
 
 heap_mem_pool_t htfh_add_pool(Allocator* alloc, heap_mem_pool_t mem, size_t bytes) __attribute__((nonnull));
 
-int htfh_free(Allocator* alloc, void* ptr) __attribute__((nonnull));
+int htfh_free(Allocator* alloc, void* ptr);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) void* htfh_malloc(Allocator* alloc, size_t nbytes) __attribute__((nonnull));
+)) void* htfh_malloc(Allocator* alloc, size_t nbytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, size_t count, size_t nbytes) __attribute__((nonnull));
+)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, size_t count, size_t nbytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(3))) void* htfh_realloc(Allocator* alloc, void* ap, size_t nbytes) __attribute__((nonnull(1)));
+)) __attribute__((alloc_size(3))) void* htfh_realloc(Allocator* alloc, void* ap, size_t nbytes);
 
 #ifdef __cplusplus
 };
