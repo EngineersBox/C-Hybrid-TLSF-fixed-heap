@@ -54,6 +54,8 @@ typedef enum allocator_error_num {
     PTR_NOT_TO_BLOCK_HEADER,
     MERGE_PREV_FAILED,
     MERGE_NEXT_FAILED,
+
+    GAP_TOO_SMALL,
 } AllocatorErrno;
 
 

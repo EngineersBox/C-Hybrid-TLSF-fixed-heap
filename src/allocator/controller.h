@@ -25,26 +25,26 @@ typedef struct Controller
 
 BlockHeader* controller_search_suitable_block(Controller* control, int* fli, int* sli);
 /* Remove a free block from the free list.*/
-void controller_remove_free_block(Controller* control, BlockHeader* block, int fl, int sl);
+int controller_remove_free_block(Controller* control, BlockHeader* block, int fl, int sl);
 /* Insert a free block into the free block list. */
-void controller_insert_free_block(Controller* control, BlockHeader* block, int fl, int sl);
+int controller_insert_free_block(Controller* control, BlockHeader* block, int fl, int sl);
 /* Remove a given block from the free list. */
-void controller_block_remove(Controller* control, BlockHeader* block);
+int controller_block_remove(Controller* control, BlockHeader* block);
 /* Insert a given block into the free list. */
-void controller_block_insert(Controller* control, BlockHeader* block);
+int controller_block_insert(Controller* control, BlockHeader* block);
 /* Merge a just-freed block with an adjacent previous free block. */
 BlockHeader* controller_block_merge_prev(Controller* control, BlockHeader* block);
 /* Merge a just-freed block with an adjacent free block. */
 BlockHeader* controller_block_merge_next(Controller* control, BlockHeader* block);
 /* Trim any trailing block space off the end of a block, return to pool. */
-void controller_block_trim_free(Controller* control, BlockHeader* block, size_t size);
+int controller_block_trim_free(Controller* control, BlockHeader* block, size_t size);
 /* Trim any trailing block space off the end of a used block, return to pool. */
-void controller_block_trim_used(Controller* control, BlockHeader* block, size_t size);
+int controller_block_trim_used(Controller* control, BlockHeader* block, size_t size);
 BlockHeader* controller_block_trim_free_leading(Controller* control, BlockHeader* block, size_t size);
 BlockHeader* controller_block_locate_free(Controller* control, size_t size);
 void* controller_block_prepare_used(Controller* control, BlockHeader* block, size_t size);
 /* Clear structure and point all empty lists at the null block. */
-void controller_construct(Controller* control);
+int controller_construct(Controller* control);
 
 #ifdef __cplusplus
 };

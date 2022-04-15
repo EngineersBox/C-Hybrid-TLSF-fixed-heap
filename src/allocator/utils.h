@@ -85,7 +85,6 @@ htfh_decl int htfh_fls_sizet(size_t size);
 ** Cast and min/max macros and prevent double evaluation
 */
 
-#define htfh_cast(t, exp) ((t) (exp))
 #define htfh_min(a,b) ({ \
     __typeof__ (a) _a = (a); \
     __typeof__ (b) _b = (b); \

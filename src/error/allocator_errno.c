@@ -44,6 +44,7 @@ inline void get_alloc_errmsg(AllocatorErrno err) {
         enum_error(MERGE_PREV_FAILED, "Unable to merge free block with previous")
         enum_error(MERGE_NEXT_FAILED, "Unable to merge free block with next")
         enum_error(CANNOT_REMOVE_BLOCK, "Unable to remove block")
+        enum_error(GAP_TOO_SMALL, "Gap size is too small")
         enum_error(NONE, "")
         default: break;
     }

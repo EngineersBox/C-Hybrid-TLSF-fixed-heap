@@ -92,19 +92,17 @@ void* align_ptr(const void* ptr, size_t align) {
     return (void*) aligned;
 }
 
-void mapping_insert(size_t size, int* fli, int* sli)
-{
+void mapping_insert(size_t size, int* fli, int* sli) {
     int fl, sl;
-    if (size < SMALL_BLOCK_SIZE)
-    {
+    if (size < SMALL_BLOCK_SIZE) {
         /* Store small blocks in first list. */
         fl = 0;
-        sl = htfh_cast(int, size) / (SMALL_BLOCK_SIZE / SL_INDEX_COUNT);
+        sl = (int) size / (SMALL_BLOCK_SIZE / SL_INDEX_COUNT);
     }
     else
     {
         fl = htfh_fls_sizet(size);
-        sl = htfh_cast(int, size >> (fl - SL_INDEX_COUNT_LOG2)) ^ (1 << SL_INDEX_COUNT_LOG2);
+        sl = (int) (size >> (fl - SL_INDEX_COUNT_LOG2)) ^ (1 << SL_INDEX_COUNT_LOG2);
         fl -= (FL_INDEX_SHIFT - 1);
     }
     *fli = fl;
@@ -112,10 +110,8 @@ void mapping_insert(size_t size, int* fli, int* sli)
 }
 
 /* This version rounds up to the next block size (for allocations) */
-void mapping_search(size_t size, int* fli, int* sli)
-{
-    if (size >= SMALL_BLOCK_SIZE)
-    {
+void mapping_search(size_t size, int* fli, int* sli) {
+    if (size >= SMALL_BLOCK_SIZE) {
         const size_t round = (1 << (htfh_fls_sizet(size) - SL_INDEX_COUNT_LOG2)) - 1;
         size += round;
     }
