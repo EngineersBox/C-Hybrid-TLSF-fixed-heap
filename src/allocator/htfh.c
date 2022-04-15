@@ -64,33 +64,30 @@ pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
     if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
         return NULL;
     }
-    BlockHeader *block;
-    BlockHeader *next;
     const size_t pool_overhead = htfh_pool_overhead();
     const size_t pool_bytes = align_down(bytes - pool_overhead, ALIGN_SIZE);
     if (((ptrdiff_t) mem % ALIGN_SIZE) != 0) {
         set_alloc_errno(POOL_MISALIGNED);
         __htfh_lock_unlock_handled(&alloc->mutex);
         return NULL;
-    }
-    if (pool_bytes < block_size_min || pool_bytes > block_size_max) {
+    } else if (pool_bytes < block_size_min || pool_bytes > block_size_max) {
         char msg[100];
         sprintf(
             msg,
             "Memory pool must be between 0x%x and 0x%x00 bytes: ",
 #ifdef ARCH_64_BIT
             (unsigned int)(pool_overhead + block_size_min),
-            (unsigned int) ((pool_overhead + block_size_max) / 256)
+            (unsigned int)((pool_overhead + block_size_max) / 256)
 #else
             (unsigned int)(pool_overhead + block_size_min),
-            (unsigned int) (pool_overhead + block_size_max)
+            (unsigned int)(pool_overhead + block_size_max)
 #endif
         );
         set_alloc_errno_msg(INVALID_POOL_SIZE, msg);
         __htfh_lock_unlock_handled(&alloc->mutex);
         return NULL;
     }
-    block = offset_to_block(mem, -(ptrdiff_t) block_header_overhead);
+    BlockHeader* block = offset_to_block(mem, -(ptrdiff_t) block_header_overhead);
     block_set_size(block, pool_bytes);
     block_set_free(block);
     block_set_prev_used(block);
@@ -99,7 +96,7 @@ pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
         return NULL;
     }
 
-    next = block_link_next(block);
+    BlockHeader* next = block_link_next(block);
     block_set_size(next, 0);
     block_set_used(next);
     block_set_prev_free(next);
