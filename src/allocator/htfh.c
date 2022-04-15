@@ -7,21 +7,21 @@
 #include <string.h>
 
 #define __htfh_lock_lock_handled(lock) ({ \
-    int lock_result = 0; \
+    int _lock_result = 0; \
     if (__htfh_lock_lock(lock) == EINVAL) { \
         set_alloc_errno_msg(MUTEX_LOCK_LOCK, strerror(EINVAL)); \
-        lock_result = -1; \
+        _lock_result = -1; \
     } \
-    lock_result; \
+    _lock_result; \
 })
 
 #define __htfh_lock_unlock_handled(lock) ({ \
-    int unlock_result = 0; \
-    if ((unlock_result = __htfh_lock_unlock(lock)) != 0) { \
-        set_alloc_errno_msg(MUTEX_LOCK_UNLOCK, strerror(unlock_result)); \
-        unlock_result = -1; \
+    int _unlock_result = 0; \
+    if ((_unlock_result = __htfh_lock_unlock(lock)) != 0) { \
+        set_alloc_errno_msg(MUTEX_LOCK_UNLOCK, strerror(_unlock_result)); \
+        _unlock_result = -1; \
     } \
-    unlock_result; \
+    _unlock_result; \
 })
 
 /*
@@ -56,10 +56,9 @@ typedef struct integrity_t
 
 #define htfh_insist(x) { htfh_assert(x); if (!(x)) { status--; } }
 
-static void integrity_walker(void* ptr, size_t size, int used, void* user)
-{
+static void integrity_walker(void* ptr, size_t size, int used, void* user) {
     BlockHeader* block = block_from_ptr(ptr);
-    integrity_t* integ = htfh_cast(integrity_t*, user);
+    integrity_t* integ = user;
     const int this_prev_status = block_is_prev_free(block) ? 1 : 0;
     const int this_status = block_is_free(block) ? 1 : 0;
     const size_t this_block_size = block_size(block);
@@ -73,11 +72,9 @@ static void integrity_walker(void* ptr, size_t size, int used, void* user)
     integ->status += status;
 }
 
-int htfh_check(htfh_t htfh)
-{
+int htfh_check(Allocator* htfh) {
     int i, j;
 
-    Controller* control = htfh_cast(Controller*, htfh);
     int status = 0;
 
     /* Check that the free lists and bitmaps are accurate. */
@@ -85,10 +82,10 @@ int htfh_check(htfh_t htfh)
     {
         for (j = 0; j < SL_INDEX_COUNT; ++j)
         {
-            const int fl_map = control->fl_bitmap & (1U << i);
-            const int sl_list = control->sl_bitmap[i];
+            const int fl_map = htfh->controller->fl_bitmap & (1U << i);
+            const int sl_list = htfh->controller->sl_bitmap[i];
             const int sl_map = sl_list & (1U << j);
-            const BlockHeader* block = control->blocks[i][j];
+            const BlockHeader* block = htfh->controller->blocks[i][j];
 
             /* Check that first- and second-level lists agree. */
             if (!fl_map)
@@ -98,15 +95,15 @@ int htfh_check(htfh_t htfh)
 
             if (!sl_map)
             {
-                htfh_insist(block == &control->block_null && "block list must be null");
+                htfh_insist(block == &htfh->controller->block_null && "block list must be null");
                 continue;
             }
 
             /* Check that there is at least one free block. */
             htfh_insist(sl_list && "no free blocks in second-level map");
-            htfh_insist(block != &control->block_null && "block should not be null");
+            htfh_insist(block != &htfh->controller->block_null && "block should not be null");
 
-            while (block != &control->block_null)
+            while (block != &htfh->controller->block_null)
             {
                 int fli, sli;
                 htfh_insist(block_is_free(block) && "block should be free");
@@ -209,58 +206,54 @@ size_t htfh_alloc_overhead(void)
     return block_header_overhead;
 }
 
-pool_t htfh_add_pool(htfh_t htfh, void* mem, size_t bytes)
-{
+pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
+    if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return NULL;
+    }
     BlockHeader* block;
     BlockHeader* next;
-
     const size_t pool_overhead = htfh_pool_overhead();
     const size_t pool_bytes = align_down(bytes - pool_overhead, ALIGN_SIZE);
-
-    if (((ptrdiff_t)mem % ALIGN_SIZE) != 0)
-    {
-        printf("htfh_add_pool: Memory must be aligned by %u bytes.\n",
-               (unsigned int)ALIGN_SIZE);
-        return 0;
+    if (((ptrdiff_t) mem % ALIGN_SIZE) != 0) {
+        set_alloc_errno(POOL_MISALIGNED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return NULL;
     }
-
-    if (pool_bytes < block_size_min || pool_bytes > block_size_max)
-    {
-#if defined (TLSF_64BIT)
-        printf("htfh_add_pool: Memory size must be between 0x%x and 0x%x00 bytes.\n",
-               (unsigned int)(pool_overhead + block_size_min),
-               (unsigned int)((pool_overhead + block_size_max) / 256));
+    if (pool_bytes < block_size_min || pool_bytes > block_size_max) {
+        char msg[100];
+        sprintf(
+            msg,
+            "Memory pool must be between 0x%x and 0x%x00 bytes: ",
+            #ifdef ARCH_64_BIT
+            (unsigned int)(pool_overhead + block_size_min),
+            (unsigned int)((pool_overhead + block_size_max) / 256)
 #else
-        printf("htfh_add_pool: Memory size must be between %u and %u bytes.\n",
-			(unsigned int)(pool_overhead + block_size_min),
-			(unsigned int)(pool_overhead + block_size_max));
+        (unsigned int)(pool_overhead + block_size_min),
+            (unsigned int)(pool_overhead + block_size_max)
 #endif
-        return 0;
+        );
+        set_alloc_errno_msg(INVALID_POOL_SIZE, msg);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return NULL;
     }
-
-    /*
-    ** Create the main free block. Offset the start of the block slightly
-    ** so that the prev_phys_block field falls outside of the pool -
-    ** it will never be used.
-    */
     block = offset_to_block(mem, -(ptrdiff_t)block_header_overhead);
     block_set_size(block, pool_bytes);
     block_set_free(block);
     block_set_prev_used(block);
-    controller_block_insert(htfh_cast(Controller*, htfh), block);
+    controller_block_insert(alloc->controller, block);
 
-    /* Split the block to create a zero-size sentinel block. */
     next = block_link_next(block);
     block_set_size(next, 0);
     block_set_used(next);
     block_set_prev_free(next);
 
+    if (__htfh_lock_unlock_handled(&alloc->mutex) != 0) {
+        return NULL;
+    }
     return mem;
 }
 
-void htfh_remove_pool(htfh_t htfh, pool_t pool)
-{
-    Controller* control = htfh_cast(Controller*, htfh);
+void htfh_remove_pool(Allocator* alloc, pool_t pool) {
     BlockHeader* block = offset_to_block(pool, -(int)block_header_overhead);
 
     int fl = 0, sl = 0;
@@ -270,7 +263,7 @@ void htfh_remove_pool(htfh_t htfh, pool_t pool)
         htfh_assert(block_size(block_next(block)) == 0 && "next block size should be zero");
 
     mapping_insert(block_size(block), &fl, &sl);
-    controller_remove_free_block(control, block, fl, sl);
+    controller_remove_free_block(alloc->controller, block, fl, sl);
 }
 
 /*
@@ -305,56 +298,133 @@ int test_ffs_fls()
 }
 #endif
 
-htfh_t htfh_create(void* mem)
-{
+Allocator* htfh_create(size_t bytes) {
 #if _DEBUG
     if (test_ffs_fls())
 	{
 		return 0;
 	}
 #endif
-
-    if (((ptrdiff_t)mem % ALIGN_SIZE) != 0)
-    {
-        printf("htfh_create: Memory must be aligned to %u bytes.\n",
-               (unsigned int)ALIGN_SIZE);
-        return 0;
+    if ((bytes % ALIGN_SIZE) != 0) {
+        char msg[100];
+        sprintf(msg, "Memory must be aligned to %u bytes", (unsigned int) ALIGN_SIZE);
+        set_alloc_errno_msg(HEAP_MISALIGNED, msg);
+        return NULL;
     }
-
-    controller_construct(htfh_cast(Controller*, mem));
-
-    return htfh_cast(htfh_t, mem);
+    Allocator* alloc = malloc(sizeof(*alloc));
+    if (alloc == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return NULL;
+    }
+    int lock_result;
+    if ((lock_result = __htfh_lock_init(&alloc->mutex, PTHREAD_MUTEX_RECURSIVE)) != 0) {
+        set_alloc_errno_msg(MUTEX_LOCK_INIT, strerror(lock_result));
+        return NULL;
+    } else if (__htfh_lock_lock_handled(&alloc->mutex) != 0) {
+        return NULL;
+    }
+    alloc->heap_size = bytes;
+    alloc->controller = alloc->heap = mmap(
+        NULL,
+        bytes,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANONYMOUS,
+        -1,
+        0
+    );
+    if (alloc->heap == NULL) {
+        set_alloc_errno(HEAP_MMAP_FAILED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return NULL;
+    }
+    controller_construct(alloc->controller);
+    htfh_add_pool(alloc, (char*)alloc->heap + htfh_size(), bytes - htfh_size());
+    return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? alloc : NULL;
 }
 
-htfh_t htfh_create_with_pool(void* mem, size_t bytes)
-{
-    htfh_t htfh = htfh_create(mem);
-    htfh_add_pool(htfh, (char*)mem + htfh_size(), bytes - htfh_size());
-    return htfh;
+int htfh_destroy(Allocator* alloc) {
+    if (alloc == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return -1;
+    } else if (alloc->controller == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return -1;
+    } else if (__htfh_lock_lock_handled(&alloc->mutex) != 0) {
+        return -1;
+    }
+    if (munmap(alloc->heap, alloc->heap_size) != 0 ) {
+        set_alloc_errno(HEAP_UNMAP_FAILED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    if (__htfh_lock_unlock_handled(&alloc->mutex) != 0) {
+        return -1;
+    }
+    free(alloc);
+    return 0;
 }
 
-void htfh_destroy(htfh_t htfh)
-{
-    /* Nothing to do. */
-    (void)htfh;
+pool_t htfh_get_pool(Allocator* alloc) {
+    return htfh_cast(pool_t, (char*)alloc->heap + htfh_size());
 }
 
-pool_t htfh_get_pool(htfh_t htfh)
-{
-    return htfh_cast(pool_t, (char*)htfh + htfh_size());
-}
-
-void* htfh_malloc(htfh_t htfh, size_t size)
-{
-    Controller* control = htfh_cast(Controller*, htfh);
+void* htfh_malloc(Allocator* alloc, size_t size) {
+    if (alloc == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return NULL;
+    } else if (alloc->controller == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return NULL;
+    } else if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return NULL;
+    }
     const size_t adjust = adjust_request_size(size, ALIGN_SIZE);
-    BlockHeader* block = controller_block_locate_free(control, adjust);
-    return controller_block_prepare_used(control, block, adjust);
+    BlockHeader* block = controller_block_locate_free(alloc->controller, adjust);
+    void* ptr = controller_block_prepare_used(alloc->controller, block, adjust);
+    return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? ptr : NULL;
 }
 
-void* htfh_memalign(htfh_t htfh, size_t align, size_t size)
-{
-    Controller* control = htfh_cast(Controller*, htfh);
+int htfh_free(Allocator* alloc, void* ptr) {
+    if (alloc == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return -1;
+    } else if (alloc->controller == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return -1;
+    } else if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return -1;
+    }
+    /* Don't attempt to free a NULL pointer. */
+    if (ptr == NULL) {
+        return __htfh_lock_unlock_handled(&alloc->mutex);
+    }
+    BlockHeader* block = block_from_ptr(ptr);
+    if (block == NULL) {
+        set_alloc_errno(BLOCK_IS_NULL);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    } else if (block_is_free(block)) {
+        set_alloc_errno(BLOCK_ALREADY_FREED);
+        __htfh_lock_unlock_handled(&alloc->mutex);
+        return -1;
+    }
+    block_mark_as_free(block);
+    block = controller_block_merge_prev(alloc->controller, block);
+    block = controller_block_merge_next(alloc->controller, block);
+    controller_block_insert(alloc->controller, block);
+    return __htfh_lock_unlock_handled(&alloc->mutex);
+}
+
+void* htfh_memalign(Allocator* alloc, size_t align, size_t size) {
+    if (alloc == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return NULL;
+    } else if (alloc->controller == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return NULL;
+    } else if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return NULL;
+    }
     const size_t adjust = adjust_request_size(size, ALIGN_SIZE);
 
     /*
@@ -374,21 +444,19 @@ void* htfh_memalign(htfh_t htfh, size_t align, size_t size)
     */
     const size_t aligned_size = (adjust && align > ALIGN_SIZE) ? size_with_gap : adjust;
 
-    BlockHeader* block = controller_block_locate_free(control, aligned_size);
+    BlockHeader* block = controller_block_locate_free(alloc->controller, aligned_size);
 
     /* This can't be a static assert. */
         htfh_assert(sizeof(BlockHeader) == block_size_min + block_header_overhead);
 
-    if (block)
-    {
+    if (block) {
         void* ptr = block_to_ptr(block);
         void* aligned = align_ptr(ptr, align);
         size_t gap = htfh_cast(size_t,
                                htfh_cast(ptrdiff_t, aligned) - htfh_cast(ptrdiff_t, ptr));
 
         /* If gap size is too small, offset to next aligned boundary. */
-        if (gap && gap < gap_minimum)
-        {
+        if (gap && gap < gap_minimum) {
             const size_t gap_remain = gap_minimum - gap;
             const size_t offset = htfh_max(gap_remain, align);
             const void* next_aligned = htfh_cast(void*,
@@ -399,29 +467,14 @@ void* htfh_memalign(htfh_t htfh, size_t align, size_t size)
                             htfh_cast(ptrdiff_t, aligned) - htfh_cast(ptrdiff_t, ptr));
         }
 
-        if (gap)
-        {
+        if (gap) {
                 htfh_assert(gap >= gap_minimum && "gap size too small");
-            block = controller_block_trim_free_leading(control, block, gap);
+            block = controller_block_trim_free_leading(alloc->controller, block, gap);
         }
     }
 
-    return controller_block_prepare_used(control, block, adjust);
-}
-
-void htfh_free(htfh_t htfh, void* ptr)
-{
-    /* Don't attempt to free a NULL pointer. */
-    if (ptr)
-    {
-        Controller* control = htfh_cast(Controller*, htfh);
-        BlockHeader* block = block_from_ptr(ptr);
-            htfh_assert(!block_is_free(block) && "block already marked as free");
-        block_mark_as_free(block);
-        block = controller_block_merge_prev(control, block);
-        block = controller_block_merge_next(control, block);
-        controller_block_insert(control, block);
-    }
+    void* ptr = controller_block_prepare_used(alloc->controller, block, adjust);
+    return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? ptr : NULL;
 }
 
 /*
@@ -437,23 +490,25 @@ void htfh_free(htfh_t htfh, void* ptr)
 ** - an extended buffer size will leave the newly-allocated area with
 **   contents undefined
 */
-void* htfh_realloc(htfh_t htfh, void* ptr, size_t size)
-{
-    Controller* control = htfh_cast(Controller*, htfh);
+void* htfh_realloc(Allocator* alloc, void* ptr, size_t size) {
+    if (alloc == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return NULL;
+    } else if (alloc->controller == NULL) {
+        set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
+        return NULL;
+    } else if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
+        return NULL;
+    }
     void* p = 0;
-
     /* Zero-size requests are treated as free. */
-    if (ptr && size == 0)
-    {
-        htfh_free(htfh, ptr);
+    if (ptr && size == 0) {
+        htfh_free(alloc, ptr);
     }
         /* Requests with NULL pointers are treated as malloc. */
-    else if (!ptr)
-    {
-        p = htfh_malloc(htfh, size);
-    }
-    else
-    {
+    else if (!ptr) {
+        p = htfh_malloc(alloc, size);
+    } else {
         BlockHeader* block = block_from_ptr(ptr);
         BlockHeader* next = block_next(block);
 
@@ -467,30 +522,25 @@ void* htfh_realloc(htfh_t htfh, void* ptr, size_t size)
         ** If the next block is used, or when combined with the current
         ** block, does not offer enough space, we must reallocate and copy.
         */
-        if (adjust > cursize && (!block_is_free(next) || adjust > combined))
-        {
-            p = htfh_malloc(htfh, size);
-            if (p)
-            {
+        if (adjust > cursize && (!block_is_free(next) || adjust > combined)) {
+            p = htfh_malloc(alloc, size);
+            if (p) {
                 const size_t minsize = htfh_min(cursize, size);
                 memcpy(p, ptr, minsize);
-                htfh_free(htfh, ptr);
+                htfh_free(alloc, ptr);
             }
-        }
-        else
-        {
+        } else {
             /* Do we need to expand to the next block? */
-            if (adjust > cursize)
-            {
-                controller_block_merge_next(control, block);
+            if (adjust > cursize) {
+                controller_block_merge_next(alloc->controller, block);
                 block_mark_as_used(block);
             }
 
             /* Trim the resulting block and return the original pointer. */
-            controller_block_trim_used(control, block, adjust);
+            controller_block_trim_used(alloc->controller, block, adjust);
             p = ptr;
         }
     }
 
-    return p;
+    return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? p : NULL;
 }

@@ -18,15 +18,7 @@ struct TestStruct {
 #define HEAP_SIZE (16 * 10000)
 
 int main(int argc, char* argv[]) {
-    void* mem = mmap(
-        NULL,
-        HEAP_SIZE,
-        PROT_READ | PROT_WRITE,
-        MAP_PRIVATE | MAP_ANONYMOUS,
-        -1,
-        0
-    );
-    htfh_t* alloc = htfh_create_with_pool(mem, HEAP_SIZE);
+    Allocator* alloc = htfh_create(HEAP_SIZE);
     if (alloc == NULL) {
         alloc_perror("Initialisation failed for heap size 16*10000 bytes: ");
         return 1;

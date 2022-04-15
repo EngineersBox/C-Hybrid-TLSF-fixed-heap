@@ -12,43 +12,49 @@ extern "C" {
 #include "../thread/lock.h"
 #include "controller.h"
 
-/* htfh_t: a TLSF structure. Can contain 1 to N pools. */
+/* Allocator: a TLSF structure. Can contain 1 to N pools. */
 /* pool_t: a block of memory that TLSF can manage. */
-typedef void* htfh_t;
+typedef struct Allocator {
+    __htfh_lock_t mutex;
+
+    Controller* controller;
+
+    size_t heap_size;
+    void* heap;
+} Allocator;
 typedef void* pool_t;
 
 /* Create/destroy a memory pool. */
-htfh_t htfh_create(void* mem);
-htfh_t htfh_create_with_pool(void* mem, size_t bytes);
-void htfh_destroy(htfh_t htfh);
-pool_t htfh_get_pool(htfh_t htfh);
+Allocator* htfh_create(size_t bytes);
+int htfh_destroy(Allocator* alloc);
+pool_t htfh_get_pool(Allocator* alloc);
 
 /* Add/remove memory pools. */
-pool_t htfh_add_pool(htfh_t htfh, void* mem, size_t bytes);
-void htfh_remove_pool(htfh_t htfh, pool_t pool);
+pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes);
+void htfh_remove_pool(Allocator* alloc, pool_t pool);
 
 /* malloc/memalign/realloc/free replacements. */
-void htfh_free(htfh_t htfh, void* ptr);
+int htfh_free(Allocator* alloc, void* ptr);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(2)))  void* htfh_malloc(htfh_t htfh, size_t bytes);
+)) __attribute__((alloc_size(2)))  void* htfh_malloc(Allocator* alloc, size_t bytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(2,3))) void* htfh_calloc(htfh_t htfh, size_t count, size_t nbytes);
+)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, size_t count, size_t nbytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) void* htfh_memalign(htfh_t htfh, size_t align, size_t bytes);
+)) void* htfh_memalign(Allocator* alloc, size_t align, size_t bytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(3))) void* htfh_realloc(htfh_t htfh, void* ptr, size_t size);
+)) __attribute__((alloc_size(3))) void* htfh_realloc(Allocator* alloc, void* ptr, size_t size);
 
 /* Returns internal block size, not original request size */
 size_t htfh_block_size(void* ptr);
@@ -65,7 +71,7 @@ size_t htfh_alloc_overhead(void);
 typedef void (*htfh_walker)(void* ptr, size_t size, int used, void* user);
 void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user);
 /* Returns nonzero if any internal consistency check fails. */
-int htfh_check(htfh_t htfh);
+int htfh_check(Allocator* htfh);
 int htfh_check_pool(pool_t pool);
 
 #ifdef __cplusplus
