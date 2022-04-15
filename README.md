@@ -66,11 +66,3 @@ TODO
 ### Dynamic
 
 TODO
-
-# TODO
-
-* Fix SIGSEGV with multiple malloc
-* Fix SIGSEGV with malloc-free-malloc
-* Implement calloc
-* Implement realloc
-* Implement memalign
