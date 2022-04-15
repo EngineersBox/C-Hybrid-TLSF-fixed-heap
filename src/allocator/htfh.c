@@ -175,7 +175,7 @@ Allocator* htfh_create(size_t bytes) {
         set_alloc_errno(HEAP_MMAP_FAILED);
         __htfh_lock_unlock_handled(&alloc->mutex);
         return NULL;
-    } else if (controller_construct(alloc->controller) != 0) {
+    } else if (controller_new(alloc->controller) != 0) {
         __htfh_lock_unlock_handled(&alloc->mutex);
         return NULL;
     }
@@ -254,13 +254,10 @@ int htfh_free(Allocator* alloc, void* ptr) {
     if (block == NULL) {
         __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
-    }
-    block = controller_block_merge_next(alloc->controller, block);
-    if (block == NULL) {
+    } else if ((block = controller_block_merge_next(alloc->controller, block)) == NULL) {
         __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
-    }
-    if (controller_block_insert(alloc->controller, block) != 0) {
+    } else if (controller_block_insert(alloc->controller, block) != 0) {
         __htfh_lock_unlock_handled(&alloc->mutex);
         return -1;
     }
@@ -297,26 +294,19 @@ void* htfh_memalign(Allocator* alloc, size_t align, size_t size) {
     const size_t aligned_size = (adjust && align > ALIGN_SIZE) ? size_with_gap : adjust;
 
     BlockHeader* block = controller_block_locate_free(alloc->controller, aligned_size);
-    if (block == NULL) {
-        __htfh_lock_unlock_handled(&alloc->mutex);
-        return NULL;
-    } else if (sizeof(BlockHeader) != block_size_min + block_header_overhead) {
+    if (sizeof(BlockHeader) != block_size_min + block_header_overhead) {
         set_alloc_errno(BLOCK_SIZE_MISMATCH);
         __htfh_lock_unlock_handled(&alloc->mutex);
         return NULL;
-    }
-
-    if (block) {
+    } else if (block != NULL) {
         void* ptr = block_to_ptr(block);
         void* aligned = align_ptr(ptr, align);
         size_t gap = (size_t)((ptrdiff_t) aligned - (ptrdiff_t) ptr);
 
         /* If gap size is too small, offset to next aligned boundary. */
         if (gap && gap < gap_minimum) {
-            const size_t gap_remain = gap_minimum - gap;
-            const size_t offset = htfh_max(gap_remain, align);
+            const size_t offset = htfh_max(gap_minimum - gap, align);
             const void* next_aligned = (void*)((ptrdiff_t) aligned + offset);
-
             aligned = align_ptr(next_aligned, align);
             gap = (size_t)((ptrdiff_t) aligned - (ptrdiff_t) ptr);
         }
@@ -326,9 +316,7 @@ void* htfh_memalign(Allocator* alloc, size_t align, size_t size) {
                 set_alloc_errno(GAP_TOO_SMALL);
                 __htfh_lock_unlock_handled(&alloc->mutex);
                 return NULL;
-            }
-            block = controller_block_trim_free_leading(alloc->controller, block, gap);
-            if (block == NULL) {
+            } else if ((block = controller_block_trim_free_leading(alloc->controller, block, gap)) == NULL) {
                 __htfh_lock_unlock_handled(&alloc->mutex);
                 return NULL;
             }
@@ -336,11 +324,7 @@ void* htfh_memalign(Allocator* alloc, size_t align, size_t size) {
     }
 
     void* ptr = controller_block_prepare_used(alloc->controller, block, adjust);
-    if (ptr == NULL) {
-        __htfh_lock_unlock_handled(&alloc->mutex);
-        return NULL;
-    }
-    return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? ptr : NULL;
+    return ptr != NULL && __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? ptr : NULL;
 }
 
 /*
@@ -393,10 +377,8 @@ void* htfh_realloc(Allocator* alloc, void* ptr, size_t size) {
     ** block, does not offer enough space, we must reallocate and copy.
     */
     if (adjust > cursize && (!block_is_free(next) || adjust > combined)) {
-        p = htfh_malloc(alloc, size);
-        if (p) {
-            const size_t minsize = htfh_min(cursize, size);
-            memcpy(p, ptr, minsize);
+        if ((p = htfh_malloc(alloc, size)) != NULL) {
+            memcpy(p, ptr, htfh_min(cursize, size));
             htfh_free(alloc, ptr);
         }
         return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? p : NULL;
@@ -415,8 +397,7 @@ void* htfh_realloc(Allocator* alloc, void* ptr, size_t size) {
         __htfh_lock_unlock_handled(&alloc->mutex);
         return NULL;
     }
-    p = ptr;
-    return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? p : NULL;
+    return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? ptr : NULL;
 }
 
 // ==== DEBUG ====

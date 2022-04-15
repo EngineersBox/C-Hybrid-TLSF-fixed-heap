@@ -44,7 +44,7 @@ BlockHeader* controller_block_trim_free_leading(Controller* control, BlockHeader
 BlockHeader* controller_block_locate_free(Controller* control, size_t size);
 void* controller_block_prepare_used(Controller* control, BlockHeader* block, size_t size);
 /* Clear structure and point all empty lists at the null block. */
-int controller_construct(Controller* control);
+int controller_new(Controller* control);
 
 #ifdef __cplusplus
 };

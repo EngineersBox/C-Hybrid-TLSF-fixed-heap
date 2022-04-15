@@ -237,7 +237,7 @@ void* controller_block_prepare_used(Controller* control, BlockHeader* block, siz
 }
 
 /* Clear structure and point all empty lists at the null block. */
-int controller_construct(Controller* control) {
+int controller_new(Controller* control) {
     if (control == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return -1;
