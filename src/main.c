@@ -30,9 +30,12 @@ int main(int argc, char* argv[]) {
     test_struct->value = 42;
     strncpy(test_struct->str, "abcdefghijklmnopqr", 18);
 
-    printf("Test struct:    [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
+    printf("Test struct:   [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
 
-    htfh_free(alloc, test_struct);
+    if (htfh_free(alloc, test_struct) != 0) {
+        alloc_perror("");
+        return 1;
+    }
 
     struct TestStruct* test_struct2 = htfh_malloc(alloc, sizeof(*test_struct2));
     if (test_struct2 == NULL) {
@@ -44,9 +47,15 @@ int main(int argc, char* argv[]) {
     printf("Test struct 2: [Value: %d] [Str: %s]\n", test_struct2->value, test_struct2->str);
     printf("Test struct:   [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
 
-    htfh_free(alloc, test_struct2);
+    if (htfh_free(alloc, test_struct2) != 0) {
+        alloc_perror("");
+        return 1;
+    }
 
-    htfh_destroy(alloc);
+    if (htfh_destroy(alloc) != 0) {
+        alloc_perror("");
+        return 1;
+    }
 
     return 0;
 }
