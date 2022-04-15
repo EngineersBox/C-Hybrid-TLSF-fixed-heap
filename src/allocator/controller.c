@@ -233,8 +233,7 @@ void* controller_block_prepare_used(Controller* control, BlockHeader* block, siz
     } else if (controller_block_trim_free(control, block, size) != 0) {
         return NULL;
     }
-    block_mark_as_used(block);
-    return block_to_ptr(block);
+    return block_mark_as_used(block) == 0 ? block_to_ptr(block) : NULL;
 }
 
 /* Clear structure and point all empty lists at the null block. */
