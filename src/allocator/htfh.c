@@ -36,105 +36,6 @@ static size_t adjust_request_size(size_t size, size_t align) {
     return adjust;
 }
 
-#define htfh_insist(x) { htfh_assert(x); if (!(x)) { status--; } }
-
-static void integrity_walker(void* ptr, size_t size, int used, void* user) {
-    BlockHeader* block = block_from_ptr(ptr);
-    integrity_t* integ = user;
-    const int this_prev_status = block_is_prev_free(block) ? 1 : 0;
-    const int this_status = block_is_free(block) ? 1 : 0;
-    const size_t this_block_size = block_size(block);
-
-    int status = 0;
-    (void)used;
-    htfh_insist(integ->prev_status == this_prev_status && "prev status incorrect");
-    htfh_insist(size == this_block_size && "block size incorrect");
-
-    integ->prev_status = this_status;
-    integ->status += status;
-}
-
-int htfh_check(Allocator* htfh) {
-    int i, j;
-
-    int status = 0;
-
-    /* Check that the free lists and bitmaps are accurate. */
-    for (i = 0; i < FL_INDEX_COUNT; ++i) {
-        for (j = 0; j < SL_INDEX_COUNT; ++j) {
-            const int fl_map = htfh->controller->fl_bitmap & (1U << i);
-            const int sl_list = htfh->controller->sl_bitmap[i];
-            const int sl_map = sl_list & (1U << j);
-            const BlockHeader* block = htfh->controller->blocks[i][j];
-
-            /* Check that first- and second-level lists agree. */
-            if (!fl_map) {
-                htfh_insist(!sl_map && "second-level map must be null");
-            }
-
-            if (!sl_map) {
-                htfh_insist(block == &htfh->controller->block_null && "block list must be null");
-                continue;
-            }
-
-            /* Check that there is at least one free block. */
-            htfh_insist(sl_list && "no free blocks in second-level map");
-            htfh_insist(block != &htfh->controller->block_null && "block should not be null");
-
-            while (block != &htfh->controller->block_null) {
-                int fli, sli;
-                htfh_insist(block_is_free(block) && "block should be free");
-                htfh_insist(!block_is_prev_free(block) && "blocks should have coalesced");
-                htfh_insist(!block_is_free(block_next(block)) && "blocks should have coalesced");
-                htfh_insist(block_is_prev_free(block_next(block)) && "block should be free");
-                htfh_insist(block_size(block) >= block_size_min && "block not minimum size");
-
-                mapping_insert(block_size(block), &fli, &sli);
-                htfh_insist(fli == i && sli == j && "block size indexed in wrong list");
-                block = block->next_free;
-            }
-        }
-    }
-
-    return status;
-}
-
-#undef htfh_insist
-
-static void default_walker(void* ptr, size_t size, int used, void* user) {
-    (void)user;
-    printf("\t%p %s size: %x (%p)\n", ptr, used ? "used" : "free", (unsigned int)size, block_from_ptr(ptr));
-}
-
-void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user) {
-    htfh_walker pool_walker = walker ? walker : default_walker;
-    BlockHeader* block = offset_to_block(pool, -(int)block_header_overhead);
-
-    while (block && !block_is_last(block)) {
-        pool_walker(
-            block_to_ptr(block),
-            block_size(block),
-            !block_is_free(block),
-            user
-        );
-        block = block_next(block);
-    }
-}
-
-size_t htfh_block_size(void* ptr) {
-    if (ptr == NULL) {
-        return 0;
-    }
-    return block_size(block_from_ptr(ptr));
-}
-
-int htfh_check_pool(pool_t pool) {
-    /* Check that the blocks are physically correct. */
-    integrity_t integ = { 0, 0 };
-    htfh_walk_pool(pool, integrity_walker, &integ);
-    return integ.status;
-}
-
 size_t htfh_size(void) {
     return sizeof(Controller);
 }
@@ -177,11 +78,11 @@ pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
         sprintf(
             msg,
             "Memory pool must be between 0x%x and 0x%x00 bytes: ",
-            #ifdef ARCH_64_BIT
+#ifdef ARCH_64_BIT
             (unsigned int)(pool_overhead + block_size_min),
             (unsigned int) ((pool_overhead + block_size_max) / 256)
 #else
-        (unsigned int)(pool_overhead + block_size_min),
+            (unsigned int)(pool_overhead + block_size_min),
             (unsigned int) (pool_overhead + block_size_max)
 #endif
         );
@@ -516,4 +417,105 @@ void* htfh_realloc(Allocator* alloc, void* ptr, size_t size) {
     }
     p = ptr;
     return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? p : NULL;
+}
+
+// ==== DEBUG ====
+
+#define htfh_insist(x) { htfh_assert(x); if (!(x)) { status--; } }
+
+static void integrity_walker(void* ptr, size_t size, int used, void* user) {
+    BlockHeader* block = block_from_ptr(ptr);
+    integrity_t* integ = user;
+    const int this_prev_status = block_is_prev_free(block) ? 1 : 0;
+    const int this_status = block_is_free(block) ? 1 : 0;
+    const size_t this_block_size = block_size(block);
+
+    int status = 0;
+    (void)used;
+    htfh_insist(integ->prev_status == this_prev_status && "prev status incorrect");
+    htfh_insist(size == this_block_size && "block size incorrect");
+
+    integ->prev_status = this_status;
+    integ->status += status;
+}
+
+int htfh_check(Allocator* htfh) {
+    int i, j;
+
+    int status = 0;
+
+    /* Check that the free lists and bitmaps are accurate. */
+    for (i = 0; i < FL_INDEX_COUNT; ++i) {
+        for (j = 0; j < SL_INDEX_COUNT; ++j) {
+            const int fl_map = htfh->controller->fl_bitmap & (1U << i);
+            const int sl_list = htfh->controller->sl_bitmap[i];
+            const int sl_map = sl_list & (1U << j);
+            const BlockHeader* block = htfh->controller->blocks[i][j];
+
+            /* Check that first- and second-level lists agree. */
+            if (!fl_map) {
+                htfh_insist(!sl_map && "second-level map must be null");
+            }
+
+            if (!sl_map) {
+                htfh_insist(block == &htfh->controller->block_null && "block list must be null");
+                continue;
+            }
+
+            /* Check that there is at least one free block. */
+            htfh_insist(sl_list && "no free blocks in second-level map");
+            htfh_insist(block != &htfh->controller->block_null && "block should not be null");
+
+            while (block != &htfh->controller->block_null) {
+                int fli, sli;
+                htfh_insist(block_is_free(block) && "block should be free");
+                htfh_insist(!block_is_prev_free(block) && "blocks should have coalesced");
+                htfh_insist(!block_is_free(block_next(block)) && "blocks should have coalesced");
+                htfh_insist(block_is_prev_free(block_next(block)) && "block should be free");
+                htfh_insist(block_size(block) >= block_size_min && "block not minimum size");
+
+                mapping_insert(block_size(block), &fli, &sli);
+                htfh_insist(fli == i && sli == j && "block size indexed in wrong list");
+                block = block->next_free;
+            }
+        }
+    }
+
+    return status;
+}
+
+#undef htfh_insist
+
+static void default_walker(void* ptr, size_t size, int used, void* user) {
+    (void)user;
+    printf("\t%p %s size: %x (%p)\n", ptr, used ? "used" : "free", (unsigned int)size, block_from_ptr(ptr));
+}
+
+void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user) {
+    htfh_walker pool_walker = walker ? walker : default_walker;
+    BlockHeader* block = offset_to_block(pool, -(int)block_header_overhead);
+
+    while (block && !block_is_last(block)) {
+        pool_walker(
+            block_to_ptr(block),
+            block_size(block),
+            !block_is_free(block),
+            user
+        );
+        block = block_next(block);
+    }
+}
+
+size_t htfh_block_size(void* ptr) {
+    if (ptr == NULL) {
+        return 0;
+    }
+    return block_size(block_from_ptr(ptr));
+}
+
+int htfh_check_pool(pool_t pool) {
+    /* Check that the blocks are physically correct. */
+    integrity_t integ = { 0, 0 };
+    htfh_walk_pool(pool, integrity_walker, &integ);
+    return integ.status;
 }
