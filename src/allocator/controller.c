@@ -195,8 +195,7 @@ BlockHeader* controller_block_locate_free(Controller* control, size_t size) {
     if (control == NULL) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return NULL;
-    }
-    if (!size) {
+    } else if (!size) {
         return NULL;
     }
     int fl = 0;
@@ -218,8 +217,7 @@ BlockHeader* controller_block_locate_free(Controller* control, size_t size) {
         set_alloc_errno(BLOCK_SIZE_MISMATCH);
         return NULL;
     }
-    controller_remove_free_block(control, block, fl, sl);
-    return block;
+    return controller_remove_free_block(control, block, fl, sl) == 0 ? block : NULL;
 }
 
 void* controller_block_prepare_used(Controller* control, BlockHeader* block, size_t size) {
