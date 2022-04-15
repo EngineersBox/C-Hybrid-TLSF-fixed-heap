@@ -55,10 +55,8 @@ int controller_remove_free_block(Controller* control, BlockHeader* block, int fl
     if (next != &control->block_null) {
         return 0;
     }
-
     /* If the new head is null, clear the bitmap. */
     control->sl_bitmap[fl] &= ~(1U << sl);
-
     /* If the second bitmap is now empty, clear the fl bitmap. */
     if (!control->sl_bitmap[fl]) {
         control->fl_bitmap &= ~(1U << fl);
@@ -79,7 +77,6 @@ int controller_insert_free_block(Controller* control, BlockHeader* block, int fl
     block->next_free = current;
     block->prev_free = &control->block_null;
     current->prev_free = block;
-
     if (block_to_ptr(block) != align_ptr(block_to_ptr(block), ALIGN_SIZE)) {
         set_alloc_errno(BLOCK_NOT_ALIGNED);
         return -1;
@@ -132,8 +129,7 @@ BlockHeader* controller_block_merge_next(Controller* control, BlockHeader* block
     BlockHeader* next = block_next(block);
     if (next == NULL) {
         return NULL;
-    }
-    if (!block_is_free(next)) {
+    } else if (!block_is_free(next)) {
         return block;
     } else if (block_is_last(block)) {
         set_alloc_errno(BLOCK_IS_LAST);
@@ -207,31 +203,29 @@ BlockHeader* controller_block_locate_free(Controller* control, size_t size) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return NULL;
     }
+    if (!size) {
+        return NULL;
+    }
     int fl = 0;
     int sl = 0;
+    mapping_search(size, &fl, &sl);
+    /*
+    ** mapping_search can futz with the size, so for excessively large sizes it can sometimes wind up
+    ** with indices that are off the end of the block array.
+    ** So, we protect against that here, since this is the only callsite of mapping_search.
+    ** Note that we don't need to check sl, since it comes from a modulo operation that guarantees it's always in range.
+    */
+    if (fl >= FL_INDEX_COUNT) {
+        return NULL;
+    }
     BlockHeader* block = NULL;
-
-    if (size) {
-        mapping_search(size, &fl, &sl);
-        /*
-        ** mapping_search can futz with the size, so for excessively large sizes it can sometimes wind up
-        ** with indices that are off the end of the block array.
-        ** So, we protect against that here, since this is the only callsite of mapping_search.
-        ** Note that we don't need to check sl, since it comes from a modulo operation that guarantees it's always in range.
-        */
-        if (fl < FL_INDEX_COUNT) {
-            block = controller_search_suitable_block(control, &fl, &sl);
-        }
+    if ((block = controller_search_suitable_block(control, &fl, &sl)) == NULL) {
+        return block;
+    } else if (block_size(block) < size) {
+        set_alloc_errno(BLOCK_SIZE_MISMATCH);
+        return NULL;
     }
-
-    if (block) {
-        if (block_size(block) < size) {
-            set_alloc_errno(BLOCK_SIZE_MISMATCH);
-            return NULL;
-        }
-        controller_remove_free_block(control, block, fl, sl);
-    }
-
+    controller_remove_free_block(control, block, fl, sl);
     return block;
 }
 
@@ -258,8 +252,7 @@ int controller_construct(Controller* control) {
         set_alloc_errno(NULL_CONTROLLER_INSTANCE);
         return -1;
     }
-    control->block_null.next_free = &control->block_null;
-    control->block_null.prev_free = &control->block_null;
+    control->block_null.prev_free = control->block_null.next_free = &control->block_null;
     control->fl_bitmap = 0;
     for (int i = 0; i < FL_INDEX_COUNT; ++i) {
         control->sl_bitmap[i] = 0;

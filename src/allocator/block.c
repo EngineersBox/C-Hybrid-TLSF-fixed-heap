@@ -5,8 +5,8 @@ size_t block_size(const BlockHeader* block) {
 }
 
 void block_set_size(BlockHeader* block, size_t size) {
-    const size_t oldsize = block->size;
-    block->size = size | (oldsize & (block_header_free_bit | block_header_prev_free_bit));
+    const size_t old_size = block->size;
+    block->size = size | (old_size & (block_header_free_bit | block_header_prev_free_bit));
 }
 
 int block_is_last(const BlockHeader* block) {

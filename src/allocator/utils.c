@@ -8,7 +8,6 @@
 
 #if defined (__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)) && defined (__GNUC_PATCHLEVEL__)
 
-
 htfh_decl int htfh_ffs(unsigned int word) {
     return __builtin_ffs(word) - 1;
 }
@@ -38,17 +37,7 @@ htfh_decl int htfh_fls_generic(unsigned int word) {
 #if defined (TLSF_64BIT)
 htfh_decl int htfh_fls_sizet(size_t size) {
     int high = (int)(size >> 32);
-    int bits = 0;
-    if (high)
-    {
-        bits = 32 + htfh_fls(high);
-    }
-    else
-    {
-        bits = htfh_fls((int)size & 0xffffffff);
-
-    }
-    return bits;
+    return high ? 32 + htfh_fls(high) : htfh_fls((int)size & 0xffffffff);
 }
 #else
 #define htfh_fls_sizet htfh_fls
@@ -93,27 +82,21 @@ void* align_ptr(const void* ptr, size_t align) {
 }
 
 void mapping_insert(size_t size, int* fli, int* sli) {
-    int fl, sl;
     if (size < SMALL_BLOCK_SIZE) {
         /* Store small blocks in first list. */
-        fl = 0;
-        sl = (int) size / (SMALL_BLOCK_SIZE / SL_INDEX_COUNT);
+        *fli = 0;
+        *sli = (int) size / (SMALL_BLOCK_SIZE / SL_INDEX_COUNT);
+        return;
     }
-    else
-    {
-        fl = htfh_fls_sizet(size);
-        sl = (int) (size >> (fl - SL_INDEX_COUNT_LOG2)) ^ (1 << SL_INDEX_COUNT_LOG2);
-        fl -= (FL_INDEX_SHIFT - 1);
-    }
-    *fli = fl;
-    *sli = sl;
+    *fli = htfh_fls_sizet(size);
+    *sli = (int) (size >> (*fli - SL_INDEX_COUNT_LOG2)) ^ (1 << SL_INDEX_COUNT_LOG2);
+    *fli -= (FL_INDEX_SHIFT - 1);
 }
 
 /* This version rounds up to the next block size (for allocations) */
 void mapping_search(size_t size, int* fli, int* sli) {
     if (size >= SMALL_BLOCK_SIZE) {
-        const size_t round = (1 << (htfh_fls_sizet(size) - SL_INDEX_COUNT_LOG2)) - 1;
-        size += round;
+        size += (1 << (htfh_fls_sizet(size) - SL_INDEX_COUNT_LOG2)) - 1;
     }
     mapping_insert(size, fli, sli);
 }
