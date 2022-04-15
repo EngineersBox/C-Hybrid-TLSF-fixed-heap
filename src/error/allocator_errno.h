@@ -29,6 +29,7 @@ typedef enum allocator_error_num {
     BLOCK_IS_LAST,
     NEXT_BLOCK_NULL,
     PREV_BLOCK_NULL,
+    PREV_BLOCK_NOT_FREE,
     BLOCK_IS_NULL,
     NON_ZERO_BLOCK_SIZE,
     BLOCK_NOT_FREE,

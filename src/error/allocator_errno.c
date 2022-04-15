@@ -25,6 +25,7 @@ inline void get_alloc_errmsg(AllocatorErrno err) {
         enum_error(BLOCK_IS_LAST, "Current block is last, next not present")
         enum_error(NEXT_BLOCK_NULL, "Next block is null")
         enum_error(PREV_BLOCK_NULL, "Previous block is null")
+        enum_error(PREV_BLOCK_NOT_FREE, "Previous block must be free")
         enum_error(BLOCK_IS_NULL, "Block in context is null")
         enum_error(NON_ZERO_BLOCK_SIZE, "Block size must be non-zero")
         enum_error(BLOCK_NOT_FREE, "Block in context is not free")

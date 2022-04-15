@@ -77,8 +77,8 @@ BlockHeader* block_prev(const BlockHeader* block);
 BlockHeader* block_next(const BlockHeader* block);
 /* Link a new block with its physical neighbor, return the neighbor. */
 BlockHeader* block_link_next(BlockHeader* block);
-void block_mark_as_free(BlockHeader* block);
-void block_mark_as_used(BlockHeader* block);
+int block_mark_as_free(BlockHeader* block);
+int block_mark_as_used(BlockHeader* block);
 int block_can_split(BlockHeader* block, size_t size);
 /* Split a block into two, the second of which is free. */
 BlockHeader* block_split(BlockHeader* block, size_t size);

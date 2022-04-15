@@ -131,7 +131,6 @@ BlockHeader* controller_block_merge_prev(Controller* control, BlockHeader* block
 BlockHeader* controller_block_merge_next(Controller* control, BlockHeader* block) {
     BlockHeader* next = block_next(block);
     if (next == NULL) {
-        set_alloc_errno(NEXT_BLOCK_NULL);
         return NULL;
     }
     if (!block_is_free(next)) {
