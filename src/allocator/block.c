@@ -62,8 +62,9 @@ BlockHeader* block_prev(const BlockHeader* block) {
 /* Return location of next existing block. */
 BlockHeader* block_next(const BlockHeader* block) {
     BlockHeader* next = offset_to_block(
-    block_to_ptr(block),
-    block_size(block) - block_header_overhead);
+        block_to_ptr(block),
+        block_size(block) - block_header_overhead
+    );
     if (block_is_last(block)) {
         set_alloc_errno(BLOCK_IS_LAST);
         return NULL;

@@ -231,9 +231,8 @@ int htfh_free(Allocator* alloc, void* ptr) {
         return -1;
     } else if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
         return -1;
-    }
-    /* Don't attempt to free a NULL pointer. */
-    if (ptr == NULL) {
+    } else if (ptr == NULL) {
+        /* Don't attempt to free a NULL pointer. */
         return __htfh_lock_unlock_handled(&alloc->mutex);
     }
     BlockHeader* block = block_from_ptr(ptr);
@@ -379,9 +378,8 @@ void* htfh_realloc(Allocator* alloc, void* ptr, size_t size) {
             htfh_free(alloc, ptr);
         }
         return __htfh_lock_unlock_handled(&alloc->mutex) == 0 ? p : NULL;
-    }
-    /* Do we need to expand to the next block? */
-    if (adjust > cursize) {
+    } else if (adjust > cursize) {
+        /* Do we need to expand to the next block? */
         if (controller_block_merge_next(alloc->controller, block) != 0) {
             __htfh_lock_unlock_handled(&alloc->mutex);
             return NULL;
