@@ -1,36 +1,29 @@
 #include "controller.h"
 
 BlockHeader* controller_search_suitable_block(Controller* control, int* fli, int* sli) {
-    int fl = *fli;
-    int sl = *sli;
-
     /*
     ** First, search for a block in the list associated with the given
     ** fl/sl index.
     */
-    unsigned int sl_map = control->sl_bitmap[fl] & (~0U << sl);
+    unsigned int sl_map = control->sl_bitmap[*fli] & (~0U << (*sli));
     if (!sl_map) {
         /* No block exists. Search in the next largest first-level list. */
-        const unsigned int fl_map = control->fl_bitmap & (~0U << (fl + 1));
+        const unsigned int fl_map = control->fl_bitmap & (~0U << ((*fli) + 1));
         if (!fl_map) {
             /* No free blocks available, memory has been exhausted. */
             set_alloc_errno(HEAP_FULL);
             return NULL;
         }
-
-        fl = htfh_ffs(fl_map);
-        *fli = fl;
-        sl_map = control->sl_bitmap[fl];
+        *fli = htfh_ffs(fl_map);
+        sl_map = control->sl_bitmap[*fli];
     }
     if (!sl_map) {
         set_alloc_errno(SECOND_LEVEL_BITMAP_NULL);
         return NULL;
     }
-    sl = htfh_ffs(sl_map);
-    *sli = sl;
-
+    *sli = htfh_ffs(sl_map);
     /* Return the first block in the free list. */
-    return control->blocks[fl][sl];
+    return control->blocks[*fli][*sli];
 }
 
 /* Remove a free block from the free list.*/
