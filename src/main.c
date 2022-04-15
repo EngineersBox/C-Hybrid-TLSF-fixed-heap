@@ -1,6 +1,7 @@
 #include <stdlib.h>
-#include "allocator/tlsf.h"
+#include "allocator/htfh.h"
 #include "error/allocator_errno.h"
+#include <sys/mman.h>
 
 struct TestStruct {
     int value;
@@ -17,12 +18,8 @@ struct TestStruct {
 #define HEAP_SIZE (16 * 10000)
 
 int main(int argc, char* argv[]) {
-    Allocator* alloc = malloc(sizeof(*alloc));
-    if (htfh_new(alloc) != 0) {
-        alloc_perror("");
-        return 1;
-    }
-    if (htfh_init(alloc, HEAP_SIZE) != 0) {
+    Allocator* alloc = htfh_create(HEAP_SIZE);
+    if (alloc == NULL) {
         alloc_perror("Initialisation failed for heap size 16*10000 bytes: ");
         return 1;
     }
@@ -35,10 +32,7 @@ int main(int argc, char* argv[]) {
 
     printf("Test struct:    [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
 
-    if (htfh_free(alloc, test_struct) != 0) {
-        alloc_perror("Failed to deallocate TestStruct: ");
-        return 1;
-    }
+    htfh_free(alloc, test_struct);
 
     struct TestStruct* test_struct2 = htfh_malloc(alloc, sizeof(*test_struct2));
     if (test_struct2 == NULL) {
@@ -50,15 +44,9 @@ int main(int argc, char* argv[]) {
     printf("Test struct 2: [Value: %d] [Str: %s]\n", test_struct2->value, test_struct2->str);
     printf("Test struct:   [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
 
-    if (htfh_free(alloc, test_struct2) != 0) {
-        alloc_perror("Failed to deallocate TestStruct2: ");
-        return 1;
-    }
+    htfh_free(alloc, test_struct2);
 
-    if (htfh_destruct(alloc) != 0) {
-        alloc_perror("");
-        return 1;
-    }
+    htfh_destroy(alloc);
 
     return 0;
 }
