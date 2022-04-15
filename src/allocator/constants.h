@@ -16,7 +16,7 @@ enum htfh_public {
 };
 
 enum htfh_private {
-#if defined (TLSF_64BIT)
+#if defined (ARCH_64_BIT)
     /* All allocation sizes and addresses are aligned to 8 bytes. */
     ALIGN_SIZE_LOG2 = 3,
 #else

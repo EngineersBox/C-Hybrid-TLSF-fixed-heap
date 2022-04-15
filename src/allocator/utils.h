@@ -42,7 +42,7 @@ extern "C" {
 */
 #if defined (__alpha__) || defined (__ia64__) || defined (__x86_64__) \
 	|| defined (_WIN64) || defined (__LP64__) || defined (__LLP64__)
-#define TLSF_64BIT
+#define ARCH_64_BIT
 #endif
 
 /*
@@ -73,7 +73,7 @@ htfh_decl int htfh_fls(unsigned int word) {
 #endif
 
 /* Possibly 64-bit version of htfh_fls. */
-#if defined (TLSF_64BIT)
+#if defined (ARCH_64_BIT)
 htfh_decl int htfh_fls_sizet(size_t size);
 #else
 #define htfh_fls_sizet htfh_fls
@@ -82,12 +82,20 @@ htfh_decl int htfh_fls_sizet(size_t size);
 #undef htfh_decl
 
 /*
-** Cast and min/max macros.
+** Cast and min/max macros and prevent double evaluation
 */
 
-#define htfh_cast(t, exp)	((t) (exp))
-#define htfh_min(a, b)		((a) < (b) ? (a) : (b))
-#define htfh_max(a, b)		((a) > (b) ? (a) : (b))
+#define htfh_cast(t, exp) ((t) (exp))
+#define htfh_min(a,b) ({ \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a < _b ? _a : _b; \
+})
+#define htfh_max(a,b) ({ \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b; \
+})
 
 /*
 ** Set assert macro, if it has not been provided by the user.

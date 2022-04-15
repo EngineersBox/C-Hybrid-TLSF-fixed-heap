@@ -24,35 +24,17 @@
     _unlock_result; \
 })
 
-/*
-** Adjust an allocation size to be aligned to word size, and no smaller
-** than internal minimum.
-*/
-static size_t adjust_request_size(size_t size, size_t align)
-{
+static size_t adjust_request_size(size_t size, size_t align) {
     size_t adjust = 0;
-    if (size)
-    {
-        const size_t aligned = align_up(size, align);
-
-        /* aligned sized must not exceed block_size_max or we'll go out of bounds on sl_bitmap */
-        if (aligned < block_size_max)
-        {
-            adjust = htfh_max(aligned, block_size_min);
-        }
+    if (!size) {
+        return 0;
+    }
+    const size_t aligned = align_up(size, align);
+    if (aligned < block_size_max) {
+        adjust = htfh_max(aligned, block_size_min);
     }
     return adjust;
 }
-
-/*
-** Debugging utilities.
-*/
-
-typedef struct integrity_t
-{
-    int prev_status;
-    int status;
-} integrity_t;
 
 #define htfh_insist(x) { htfh_assert(x); if (!(x)) { status--; } }
 
@@ -78,23 +60,19 @@ int htfh_check(Allocator* htfh) {
     int status = 0;
 
     /* Check that the free lists and bitmaps are accurate. */
-    for (i = 0; i < FL_INDEX_COUNT; ++i)
-    {
-        for (j = 0; j < SL_INDEX_COUNT; ++j)
-        {
+    for (i = 0; i < FL_INDEX_COUNT; ++i) {
+        for (j = 0; j < SL_INDEX_COUNT; ++j) {
             const int fl_map = htfh->controller->fl_bitmap & (1U << i);
             const int sl_list = htfh->controller->sl_bitmap[i];
             const int sl_map = sl_list & (1U << j);
             const BlockHeader* block = htfh->controller->blocks[i][j];
 
             /* Check that first- and second-level lists agree. */
-            if (!fl_map)
-            {
+            if (!fl_map) {
                 htfh_insist(!sl_map && "second-level map must be null");
             }
 
-            if (!sl_map)
-            {
+            if (!sl_map) {
                 htfh_insist(block == &htfh->controller->block_null && "block list must be null");
                 continue;
             }
@@ -103,8 +81,7 @@ int htfh_check(Allocator* htfh) {
             htfh_insist(sl_list && "no free blocks in second-level map");
             htfh_insist(block != &htfh->controller->block_null && "block should not be null");
 
-            while (block != &htfh->controller->block_null)
-            {
+            while (block != &htfh->controller->block_null) {
                 int fli, sli;
                 htfh_insist(block_is_free(block) && "block should be free");
                 htfh_insist(!block_is_prev_free(block) && "blocks should have coalesced");
@@ -124,20 +101,16 @@ int htfh_check(Allocator* htfh) {
 
 #undef htfh_insist
 
-static void default_walker(void* ptr, size_t size, int used, void* user)
-{
+static void default_walker(void* ptr, size_t size, int used, void* user) {
     (void)user;
     printf("\t%p %s size: %x (%p)\n", ptr, used ? "used" : "free", (unsigned int)size, block_from_ptr(ptr));
 }
 
-void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user)
-{
+void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user) {
     htfh_walker pool_walker = walker ? walker : default_walker;
-    BlockHeader* block =
-        offset_to_block(pool, -(int)block_header_overhead);
+    BlockHeader* block = offset_to_block(pool, -(int)block_header_overhead);
 
-    while (block && !block_is_last(block))
-    {
+    while (block && !block_is_last(block)) {
         pool_walker(
             block_to_ptr(block),
             block_size(block),
@@ -147,62 +120,43 @@ void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user)
     }
 }
 
-size_t htfh_block_size(void* ptr)
-{
+size_t htfh_block_size(void* ptr) {
     size_t size = 0;
-    if (ptr)
-    {
+    if (ptr) {
         const BlockHeader* block = block_from_ptr(ptr);
         size = block_size(block);
     }
     return size;
 }
 
-int htfh_check_pool(pool_t pool)
-{
+int htfh_check_pool(pool_t pool) {
     /* Check that the blocks are physically correct. */
     integrity_t integ = { 0, 0 };
     htfh_walk_pool(pool, integrity_walker, &integ);
-
     return integ.status;
 }
 
-/*
-** Size of the TLSF structures in a given memory block passed to
-** htfh_create, equal to the size of a Controller
-*/
-size_t htfh_size(void)
-{
+size_t htfh_size(void) {
     return sizeof(Controller);
 }
 
-size_t htfh_align_size(void)
-{
+size_t htfh_align_size(void) {
     return ALIGN_SIZE;
 }
 
-size_t htfh_block_size_min(void)
-{
+size_t htfh_block_size_min(void) {
     return block_size_min;
 }
 
-size_t htfh_block_size_max(void)
-{
+size_t htfh_block_size_max(void) {
     return block_size_max;
 }
 
-/*
-** Overhead of the TLSF structures in a given memory block passed to
-** htfh_add_pool, equal to the overhead of a free block and the
-** sentinel block.
-*/
-size_t htfh_pool_overhead(void)
-{
+size_t htfh_pool_overhead(void) {
     return 2 * block_header_overhead;
 }
 
-size_t htfh_alloc_overhead(void)
-{
+size_t htfh_alloc_overhead(void) {
     return block_header_overhead;
 }
 
@@ -228,7 +182,7 @@ pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
             (unsigned int)(pool_overhead + block_size_min),
             (unsigned int)((pool_overhead + block_size_max) / 256)
 #else
-        (unsigned int)(pool_overhead + block_size_min),
+            (unsigned int)(pool_overhead + block_size_min),
             (unsigned int)(pool_overhead + block_size_max)
 #endif
         );
@@ -253,23 +207,6 @@ pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
     return mem;
 }
 
-void htfh_remove_pool(Allocator* alloc, pool_t pool) {
-    BlockHeader* block = offset_to_block(pool, -(int)block_header_overhead);
-
-    int fl = 0, sl = 0;
-
-        htfh_assert(block_is_free(block) && "block should be free");
-        htfh_assert(!block_is_free(block_next(block)) && "next block should not be free");
-        htfh_assert(block_size(block_next(block)) == 0 && "next block size should be zero");
-
-    mapping_insert(block_size(block), &fl, &sl);
-    controller_remove_free_block(alloc->controller, block, fl, sl);
-}
-
-/*
-** TLSF main interface.
-*/
-
 #if _DEBUG
 int test_ffs_fls()
 {
@@ -284,7 +221,7 @@ int test_ffs_fls()
 	rv += (htfh_fls(0x80000008) == 31) ? 0 : 0x40;
 	rv += (htfh_fls(0x7FFFFFFF) == 30) ? 0 : 0x80;
 
-#if defined (TLSF_64BIT)
+#if defined (ARCH_64_BIT)
 	rv += (htfh_fls_sizet(0x80000000) == 31) ? 0 : 0x100;
 	rv += (htfh_fls_sizet(0x100000000) == 32) ? 0 : 0x200;
 	rv += (htfh_fls_sizet(0xffffffffffffffff) == 63) ? 0 : 0x400;
@@ -362,10 +299,6 @@ int htfh_destroy(Allocator* alloc) {
     }
     free(alloc);
     return 0;
-}
-
-pool_t htfh_get_pool(Allocator* alloc) {
-    return htfh_cast(pool_t, (char*)alloc->heap + htfh_size());
 }
 
 void* htfh_malloc(Allocator* alloc, size_t size) {

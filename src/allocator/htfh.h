@@ -22,16 +22,20 @@ typedef struct Allocator {
     size_t heap_size;
     void* heap;
 } Allocator;
+
 typedef void* pool_t;
+
+typedef struct integrity_t {
+    int prev_status;
+    int status;
+} integrity_t;
 
 /* Create/destroy a memory pool. */
 Allocator* htfh_create(size_t bytes);
 int htfh_destroy(Allocator* alloc);
-pool_t htfh_get_pool(Allocator* alloc);
 
 /* Add/remove memory pools. */
 pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes);
-void htfh_remove_pool(Allocator* alloc, pool_t pool);
 
 /* malloc/memalign/realloc/free replacements. */
 int htfh_free(Allocator* alloc, void* ptr);
