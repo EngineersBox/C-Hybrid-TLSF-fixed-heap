@@ -36,7 +36,6 @@ int main(int argc, char* argv[]) {
     printf("Test struct[0]: [Value: %d] [Str: %s]\n", test_struct[0].value, test_struct[0].str);
     printf("Test struct[1]: [Value: %d] [Str: %s]\n", test_struct[0].value, test_struct[0].str);
 
-
     if (htfh_free(alloc, test_struct) != 0) {
         alloc_perror("");
         return 1;

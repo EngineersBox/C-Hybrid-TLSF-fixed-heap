@@ -60,7 +60,7 @@ size_t htfh_alloc_overhead(void) {
     return block_header_overhead;
 }
 
-pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
+void* htfh_add_pool(Allocator* alloc, void* mem, size_t bytes) {
     if (__htfh_lock_lock_handled(&alloc->mutex) == -1) {
         return NULL;
     }
@@ -256,10 +256,10 @@ int htfh_free(Allocator* alloc, void* ptr) {
     return __htfh_lock_unlock_handled(&alloc->mutex);
 }
 
-void* htfh_calloc(Allocator* alloc, size_t count, size_t nbytes) {
-    void* ptr = htfh_malloc(alloc, count * nbytes);
+void* htfh_calloc(Allocator* alloc, size_t count, size_t bytes) {
+    void* ptr = htfh_malloc(alloc, count * bytes);
     if (ptr != NULL) {
-        memset(ptr, 0, count * nbytes);
+        memset(ptr, 0, count * bytes);
     }
     return ptr;
 }
@@ -471,7 +471,7 @@ static void default_walker(void* ptr, size_t size, int used, void* user) {
     printf("\t%p %s size: %x (%p)\n", ptr, used ? "used" : "free", (unsigned int)size, block_from_ptr(ptr));
 }
 
-void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user) {
+void htfh_walk_pool(void* pool, htfh_walker walker, void* user) {
     htfh_walker pool_walker = walker ? walker : default_walker;
     BlockHeader* block = offset_to_block(pool, -(int)block_header_overhead);
 
@@ -493,7 +493,7 @@ size_t htfh_block_size(void* ptr) {
     return block_size(block_from_ptr(ptr));
 }
 
-int htfh_check_pool(pool_t pool) {
+int htfh_check_pool(void* pool) {
     /* Check that the blocks are physically correct. */
     integrity_t integ = { 0, 0 };
     htfh_walk_pool(pool, integrity_walker, &integ);

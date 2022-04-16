@@ -23,8 +23,6 @@ typedef struct Allocator {
     void* heap;
 } Allocator;
 
-typedef void* pool_t;
-
 typedef struct integrity_t {
     int prev_status;
     int status;
@@ -35,7 +33,7 @@ Allocator* htfh_create(size_t bytes);
 int htfh_destroy(Allocator* alloc);
 
 /* Add/remove memory pools. */
-pool_t htfh_add_pool(Allocator* alloc, void* mem, size_t bytes);
+void* htfh_add_pool(Allocator* alloc, void* mem, size_t bytes);
 
 /* malloc/memalign/realloc/free replacements. */
 int htfh_free(Allocator* alloc, void* ptr);
@@ -48,7 +46,7 @@ __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, size_t count, size_t nbytes);
+)) __attribute__((alloc_size(2,3))) void* htfh_calloc(Allocator* alloc, size_t count, size_t bytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
@@ -73,10 +71,10 @@ size_t htfh_alloc_overhead(void);
 
 /* Debugging. */
 typedef void (*htfh_walker)(void* ptr, size_t size, int used, void* user);
-void htfh_walk_pool(pool_t pool, htfh_walker walker, void* user);
+void htfh_walk_pool(void* pool, htfh_walker walker, void* user);
 /* Returns nonzero if any internal consistency check fails. */
 int htfh_check(Allocator* htfh);
-int htfh_check_pool(pool_t pool);
+int htfh_check_pool(void* pool);
 
 #ifdef __cplusplus
 };
