@@ -16,9 +16,7 @@ extern "C" {
 /* pool_t: a block of memory that TLSF can manage. */
 typedef struct Allocator {
     __htfh_lock_t mutex;
-
     Controller* controller;
-
     size_t heap_size;
     void* heap;
 } Allocator;
@@ -41,7 +39,7 @@ __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) __attribute__((alloc_size(2)))  void* htfh_malloc(Allocator* alloc, size_t bytes);
+)) __attribute__((alloc_size(2))) void* htfh_malloc(Allocator* alloc, size_t bytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
@@ -51,7 +49,7 @@ __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)
 #endif
-)) void* htfh_memalign(Allocator* alloc, size_t align, size_t bytes);
+)) __attribute__((alloc_size(2,3))) void* htfh_memalign(Allocator* alloc, size_t align, size_t bytes);
 __attribute__((malloc
 #if __GNUC__ >= 10
 , malloc (htfh_free, 2)

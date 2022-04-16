@@ -10,8 +10,7 @@ extern "C" {
 #include "block.h"
 
 /* The TLSF control structure. */
-typedef struct Controller
-{
+typedef struct Controller {
     /* Empty lists point at this block to indicate they are free. */
     BlockHeader block_null;
 

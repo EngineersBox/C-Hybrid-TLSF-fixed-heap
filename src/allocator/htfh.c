@@ -36,27 +36,27 @@ static size_t adjust_request_size(size_t size, size_t align) {
     return adjust;
 }
 
-size_t htfh_size(void) {
+inline size_t htfh_size(void) {
     return sizeof(Controller);
 }
 
-size_t htfh_align_size(void) {
+inline size_t htfh_align_size(void) {
     return ALIGN_SIZE;
 }
 
-size_t htfh_block_size_min(void) {
+inline size_t htfh_block_size_min(void) {
     return block_size_min;
 }
 
-size_t htfh_block_size_max(void) {
+inline size_t htfh_block_size_max(void) {
     return block_size_max;
 }
 
-size_t htfh_pool_overhead(void) {
+inline size_t htfh_pool_overhead(void) {
     return 2 * block_header_overhead;
 }
 
-size_t htfh_alloc_overhead(void) {
+inline size_t htfh_alloc_overhead(void) {
     return block_header_overhead;
 }
 

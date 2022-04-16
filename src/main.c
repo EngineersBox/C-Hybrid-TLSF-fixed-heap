@@ -36,15 +36,16 @@ int main(int argc, char* argv[]) {
     printf("Test struct[0]: [Value: %d] [Str: %s]\n", test_struct[0].value, test_struct[0].str);
     printf("Test struct[1]: [Value: %d] [Str: %s]\n", test_struct[0].value, test_struct[0].str);
 
+    struct TestStruct* test_struct2 = htfh_malloc(alloc, sizeof(*test_struct2));
+    if (test_struct2 == NULL) {
+        print_error("Failed to allocate %zu bytes for TestStruct2: ", sizeof(*test_struct2));
+    }
+
     if (htfh_free(alloc, test_struct) != 0) {
         alloc_perror("");
         return 1;
     }
 
-    struct TestStruct* test_struct2 = htfh_malloc(alloc, sizeof(*test_struct2));
-    if (test_struct2 == NULL) {
-        print_error("Failed to allocate %zu bytes for TestStruct2: ", sizeof(*test_struct2));
-    }
     test_struct2->value = 84;
     strncpy(test_struct2->str, "012345678901234567", 18);
 
