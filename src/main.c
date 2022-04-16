@@ -23,14 +23,19 @@ int main(int argc, char* argv[]) {
         alloc_perror("Initialisation failed for heap size 16*10000 bytes: ");
         return 1;
     }
-    struct TestStruct* test_struct = htfh_malloc(alloc, sizeof(*test_struct));
+    struct TestStruct* test_struct = htfh_malloc(alloc, 2 * sizeof(*test_struct));
     if (test_struct == NULL) {
         print_error("Failed to allocate %zu bytes for TestStruct: ", sizeof(*test_struct));
     }
-    test_struct->value = 42;
-    strncpy(test_struct->str, "abcdefghijklmnopqr", 18);
+    test_struct[0].value = 42;
+    strncpy(test_struct[0].str, "abcdefghijklmnopqr", 18);
 
-    printf("Test struct:   [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
+    test_struct[1].value = 42;
+    strncpy(test_struct[1].str, "abcdefghijklmnopqr", 18);
+
+    printf("Test struct[0]: [Value: %d] [Str: %s]\n", test_struct[0].value, test_struct[0].str);
+    printf("Test struct[1]: [Value: %d] [Str: %s]\n", test_struct[0].value, test_struct[0].str);
+
 
     if (htfh_free(alloc, test_struct) != 0) {
         alloc_perror("");
@@ -44,8 +49,8 @@ int main(int argc, char* argv[]) {
     test_struct2->value = 84;
     strncpy(test_struct2->str, "012345678901234567", 18);
 
-    printf("Test struct 2: [Value: %d] [Str: %s]\n", test_struct2->value, test_struct2->str);
-    printf("Test struct:   [Value: %d] [Str: %s]\n", test_struct->value, test_struct->str);
+    printf("Test struct 2:  [Value: %d] [Str: %s]\n", test_struct2->value, test_struct2->str);
+    printf("Test struct[0]: [Value: %d] [Str: %s]\n", test_struct[0].value, test_struct[0].str);
 
     if (htfh_free(alloc, test_struct2) != 0) {
         alloc_perror("");
