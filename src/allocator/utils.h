@@ -12,12 +12,6 @@ extern "C" {
 #include <limits.h>
 #include "constants.h"
 
-#if defined(__cplusplus)
-#define htfh_decl inline
-#else
-#define htfh_decl
-#endif
-
 /*
 ** Architecture-specific bit manipulation routines.
 **
@@ -40,8 +34,8 @@ extern "C" {
 ** Detect whether or not we are building for a 32- or 64-bit (LP/LLP)
 ** architecture. There is no reliable portable method at compile-time.
 */
-#if defined (__alpha__) || defined (__ia64__) || defined (__x86_64__) \
-	|| defined (_WIN64) || defined (__LP64__) || defined (__LLP64__)
+#if defined(__alpha__) || defined(__ia64__) || defined(__x86_64__) \
+	|| defined(_WIN64) || defined(__LP64__) || defined(__LLP64__)
 #define ARCH_64_BIT
 #endif
 
@@ -49,24 +43,19 @@ extern "C" {
 ** gcc 3.4 and above have builtin support, specialized for architecture.
 ** Some compilers masquerade as gcc; patchlevel test filters them out.
 */
-#if defined (__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)) && defined (__GNUC_PATCHLEVEL__)
-
-
-htfh_decl int htfh_ffs(unsigned int word);
-
-htfh_decl int htfh_fls(unsigned int word);
-
+#if defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)) && defined(__GNUC_PATCHLEVEL__)
+int htfh_ffs(unsigned int word);
+int htfh_fls(unsigned int word);
 #else
 /* Fall back to generic implementation. */
-
-htfh_decl int htfh_fls_generic(unsigned int word);
+int htfh_fls_generic(unsigned int word);
 
 /* Implement ffs in terms of fls. */
-htfh_decl int htfh_ffs(unsigned int word) {
+inline int htfh_ffs(unsigned int word) {
     return htfh_fls_generic(word & (~word + 1)) - 1;
 }
 
-htfh_decl int htfh_fls(unsigned int word) {
+inline int htfh_fls(unsigned int word) {
     return htfh_fls_generic(word) - 1;
 }
 
@@ -74,12 +63,10 @@ htfh_decl int htfh_fls(unsigned int word) {
 
 /* Possibly 64-bit version of htfh_fls. */
 #if defined (ARCH_64_BIT)
-htfh_decl int htfh_fls_sizet(size_t size);
+int htfh_fls_sizet(size_t size);
 #else
 #define htfh_fls_sizet htfh_fls
 #endif
-
-#undef htfh_decl
 
 /*
 ** Cast and min/max macros and prevent double evaluation

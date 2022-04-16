@@ -69,7 +69,7 @@ extern __thread char __alloc__errno_location[MAX_ERR_LINE_LENGTH];
 extern __thread char __alloc__errno_msg[MAX_ERR_STRING_LENGTH];
 extern __thread char __alloc__errno_strerr[MAX_ERR_LINE_LENGTH];
 
-extern inline void get_alloc_errmsg(AllocatorErrno err);
+extern void get_alloc_errmsg(AllocatorErrno err);
 
 #define set_alloc_errno(err) alloc_errno = err; sprintf(__alloc__errno_location, "%s(%s:%d)", __func__, __FILE__, __LINE__)
 #define set_alloc_errno_msg(err, msg) sprintf(__alloc__errno_strerr, ": [%s]:", msg); set_alloc_errno(err)

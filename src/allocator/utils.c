@@ -1,26 +1,18 @@
 #include "utils.h"
 
-#if defined(__cplusplus)
-#define htfh_decl inline
-#else
-#define htfh_decl
-#endif
-
 #if defined (__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)) && defined (__GNUC_PATCHLEVEL__)
-
-htfh_decl int htfh_ffs(unsigned int word) {
+inline int htfh_ffs(unsigned int word) {
     return __builtin_ffs(word) - 1;
 }
 
-htfh_decl int htfh_fls(unsigned int word) {
+inline int htfh_fls(unsigned int word) {
     const int bit = word ? 32 - __builtin_clz(word) : 0;
     return bit - 1;
 }
-
 #else
 /* Fall back to generic implementation. */
 
-htfh_decl int htfh_fls_generic(unsigned int word) {
+inline int htfh_fls_generic(unsigned int word) {
     int bit = 32;
     if (!word) bit -= 1;
     if (!(word & 0xffff0000)) { word <<= 16; bit -= 16; }
@@ -35,15 +27,13 @@ htfh_decl int htfh_fls_generic(unsigned int word) {
 
 /* Possibly 64-bit version of htfh_fls. */
 #if defined (TLSF_64BIT)
-htfh_decl int htfh_fls_sizet(size_t size) {
+inline int htfh_fls_sizet(size_t size) {
     int high = (int)(size >> 32);
     return high ? 32 + htfh_fls(high) : htfh_fls((int)size & 0xffffffff);
 }
 #else
 #define htfh_fls_sizet htfh_fls
 #endif
-
-#undef htfh_decl
 
 /* This code has been tested on 32- and 64-bit (LP/LLP) architectures. */
 htfh_static_assert(sizeof(int) * CHAR_BIT == 32);
