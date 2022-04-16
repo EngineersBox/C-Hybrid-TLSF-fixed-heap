@@ -256,6 +256,14 @@ int htfh_free(Allocator* alloc, void* ptr) {
     return __htfh_lock_unlock_handled(&alloc->mutex);
 }
 
+void* htfh_calloc(Allocator* alloc, size_t count, size_t nbytes) {
+    void* ptr = htfh_malloc(alloc, count * nbytes);
+    if (ptr != NULL) {
+        memset(ptr, 0, count * nbytes);
+    }
+    return ptr;
+}
+
 void* htfh_memalign(Allocator* alloc, size_t align, size_t size) {
     if (alloc == NULL) {
         set_alloc_errno(NULL_ALLOCATOR_INSTANCE);
